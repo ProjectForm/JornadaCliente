@@ -64,3 +64,29 @@ Status Semaforo =
 A regra de negocio ja esta resolvida nas views (v_classificacao_plano /
 v_inconsistencia_plano). Isso evita recriar a logica de contagem condicional
 em DAX, que ficaria tao complexa quanto as formulas Excel originais.
+
+## 7. Publicar na Web (para o link publico em web/)
+
+O site em `web/` (publicado no Vercel) tem uma secao "Relatorio completo no
+Power BI" com um iframe vazio ate esse passo ser feito -- e um passo manual,
+o Power BI Desktop nao tem API de automacao:
+
+1. Rodar `python etl_pipeline.py` (garante que `data/reports/*.csv` esta atualizado).
+2. Abrir o Power BI Desktop, "Obter Dados" > "Texto/CSV", importar os 5 CSVs
+   de `data/reports/` (`dados_cliente`, `controle_gestor`, `controle_vertical`,
+   `log_alteracoes`) e a tabela `gestores` (via CSV ou ODBC, secao 1).
+3. Montar o modelo (secao 2-3) e as medidas DAX (secao 4); montar os visuais
+   (secao 5).
+4. Arquivo > Publicar > Publicar na Web (nao confundir com "Publicar" comum,
+   que exige que quem visualiza tenha login no Power BI). A conta usada
+   precisa permitir "Publicar na Web" -- **contas M365 corporativas as vezes
+   tem essa opcao desabilitada pelo administrador do tenant** (politica de
+   seguranca, ja que o relatorio fica 100% publico na internet). Se a opcao
+   nao aparecer ou for bloqueada, criar uma conta Microsoft pessoal gratuita
+   (sem custo, sem depender do tenant do trabalho) e publicar por ela --
+   como os dados sao 100% sinteticos, nao ha nenhum problema em ficar publico.
+5. Copiar o link de embed gerado (formato
+   `https://app.powerbi.com/view?r=...`).
+6. Colar esse link na constante `POWERBI_EMBED_URL` no topo de
+   `web/assets/app.js`, commitar e dar `git push` -- o Vercel redeploya
+   automaticamente e o iframe passa a aparecer no site.

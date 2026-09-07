@@ -1,0 +1,14 @@
+{
+  "total_clientes": 2500,
+  "pj_distintos": 405,
+  "pct_pj_distintos": 16.2,
+  "total_inconsistencias": 20,
+  "respondeu_pesquisa": 919,
+  "pct_respondentes": 36.8,
+  "media_aumento_faturamento_pct": 23.3,
+  "status_contagem": {
+    "Participante": 1805,
+    "Concluinte": 405,
+    "Sem atendimento": 290
+  }
+}

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel de Acompanhamento de Carteira</title>
+<meta name="description" content="Demo publica de um painel de acompanhamento de carteira de clientes -- SQL + Python + Power BI, dados 100% sinteticos.">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-row">
+    <div>
+      <p class="eyebrow">Portfolio tecnico &middot; Juan</p>
+      <h1>Painel de Acompanhamento de Carteira</h1>
+    </div>
+    <nav class="header-links">
+      <a href="https://github.com/ProjectForm/JornadaCliente" target="_blank" rel="noopener">Ver codigo no GitHub</a>
+      <a href="#powerbi" class="btn-ghost">Ver no Power BI</a>
+    </nav>
+  </div>
+</header>
+
+<div class="synthetic-banner">
+  <div class="wrap">
+    <strong>100% dados sinteticos</strong> &mdash; gerados por script (seed fixa), sem qualquer vinculo com clientes, empresas ou dados reais. Reconstrucao publica de um sistema de acompanhamento de carteira desenvolvido originalmente em Excel/VBA.
+  </div>
+</div>
+
+<main class="wrap">
+
+  <section class="hero">
+    <p>
+      Uma organizacao com <strong>multiplos gestores de carteira</strong> precisa saber, a cada
+      atualizacao da base de atendimentos, quais clientes ja cumpriram a regra de negocio de
+      "conclusao" &mdash; e quais teriam cumprido, se nao fosse um lancamento invalido por erro de
+      digitacao/integracao. Esta e a mesma logica de negocio resolvida com <strong>SQL + Python</strong>
+      em vez de formulas de planilha, com um <strong>CLI para os gestores</strong> incluirem/editarem
+      clientes com permissao por vertical, e um <strong>relatorio Power BI</strong> para a visualizacao final.
+    </p>
+  </section>
+
+  <section aria-label="Indicadores gerais">
+    <div class="kpi-row" id="kpi-row">
+      <div class="stat-tile skeleton"><span class="stat-label">Total de clientes</span><span class="stat-value">&nbsp;</span></div>
+      <div class="stat-tile skeleton"><span class="stat-label">PJ Distintos</span><span class="stat-value">&nbsp;</span></div>
+      <div class="stat-tile skeleton"><span class="stat-label">% PJ Distintos</span><span class="stat-value">&nbsp;</span></div>
+      <div class="stat-tile skeleton"><span class="stat-label">Inconsistencias</span><span class="stat-value">&nbsp;</span></div>
+      <div class="stat-tile skeleton"><span class="stat-label">% Respondentes da pesquisa</span><span class="stat-value">&nbsp;</span></div>
+      <div class="stat-tile skeleton"><span class="stat-label">Aumento medio de faturamento</span><span class="stat-value">&nbsp;</span></div>
+    </div>
+  </section>
+
+  <section class="grid-2">
+    <div class="card">
+      <div class="card-head">
+        <h2>PJ Distintos por vertical</h2>
+        <p class="card-sub">Clientes que cumpriram a regra de conclusao, por vertical de negocio</p>
+      </div>
+      <div id="chart-vertical" class="bar-chart" role="img" aria-label="Grafico de barras: PJ Distintos por vertical"></div>
+      <button class="table-toggle" data-target="table-vertical">Ver como tabela</button>
+      <div class="table-wrap" id="table-vertical" hidden></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Clientes por status</h2>
+        <p class="card-sub">Concluinte, participante ou sem atendimento lancado</p>
+      </div>
+      <div id="chart-status" class="stacked-bar" role="img" aria-label="Grafico: distribuicao de clientes por status"></div>
+      <ul class="legend" id="legend-status"></ul>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Ranking de gestores</h2>
+      <p class="card-sub">Carteira, PJ Distintos e inconsistencias por gestor (ordenado por PJ Distintos)</p>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table" id="table-gestores">
+        <thead>
+          <tr>
+            <th>Gestor</th>
+            <th>Vertical</th>
+            <th class="num">Clientes</th>
+            <th class="num">PJ Distintos</th>
+            <th></th>
+            <th class="num">Inconsistencias</th>
+            <th class="num">% Respondentes</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Auditoria recente</h2>
+      <p class="card-sub">Ultimas inclusoes/edicoes/exclusoes feitas pelos gestores via CLI (log_alteracoes)</p>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table" id="table-log">
+        <thead>
+          <tr>
+            <th>Quando</th>
+            <th>Operacao</th>
+            <th>Tabela</th>
+            <th>Registro</th>
+            <th>Campo</th>
+            <th>Antigo &rarr; Novo</th>
+            <th>Gestor</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <p class="empty-state" id="log-empty" hidden>Nenhuma alteracao registrada ainda neste ambiente &mdash; toda inclusao/edicao/exclusao feita via <code>adicionar_cliente.py</code> aparece aqui.</p>
+    </div>
+  </section>
+
+  <section class="card powerbi-card" id="powerbi">
+    <div class="card-head">
+      <h2>Relatorio completo no Power BI</h2>
+      <p class="card-sub">Drill-down por cliente, filtros interativos e o modelo de dados completo (ver <code>powerbi/modelo_de_dados_e_dax.md</code> no repositorio)</p>
+    </div>
+    <div id="powerbi-embed"></div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p>Python (stdlib) + SQL (views) + Pandas/Matplotlib + Power BI (DAX) + pytest.
+      <a href="https://github.com/ProjectForm/JornadaCliente" target="_blank" rel="noopener">Codigo-fonte no GitHub</a>.
+    </p>
+  </div>
+</footer>
+
+<script src="assets/app.js"></script>
+</body>
+</html>

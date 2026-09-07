@@ -1,0 +1,65 @@
+[
+  {
+    "vertical": "Atendimento ao Cliente",
+    "clientes_na_carteira": "325",
+    "pj_distintos": "48",
+    "total_inconsistencias": "5",
+    "respondeu_pesquisa": "108",
+    "pct_respondeu": "33.2",
+    "media_aumento_faturamento_pct": "24.8"
+  },
+  {
+    "vertical": "Comercio e Servicos",
+    "clientes_na_carteira": "458",
+    "pj_distintos": "66",
+    "total_inconsistencias": "2",
+    "respondeu_pesquisa": "156",
+    "pct_respondeu": "34.1",
+    "media_aumento_faturamento_pct": "22.9"
+  },
+  {
+    "vertical": "Consultoria Especializada",
+    "clientes_na_carteira": "315",
+    "pj_distintos": "40",
+    "total_inconsistencias": "4",
+    "respondeu_pesquisa": "129",
+    "pct_respondeu": "41.0",
+    "media_aumento_faturamento_pct": "21.5"
+  },
+  {
+    "vertical": "Empreendedorismo Cultural",
+    "clientes_na_carteira": "304",
+    "pj_distintos": "56",
+    "total_inconsistencias": "5",
+    "respondeu_pesquisa": "115",
+    "pct_respondeu": "37.8",
+    "media_aumento_faturamento_pct": "22.8"
+  },
+  {
+    "vertical": "Sustentabilidade",
+    "clientes_na_carteira": "313",
+    "pj_distintos": "50",
+    "total_inconsistencias": "1",
+    "respondeu_pesquisa": "123",
+    "pct_respondeu": "39.3",
+    "media_aumento_faturamento_pct": "23.3"
+  },
+  {
+    "vertical": "Tecnologia e Inovacao",
+    "clientes_na_carteira": "465",
+    "pj_distintos": "87",
+    "total_inconsistencias": "1",
+    "respondeu_pesquisa": "183",
+    "pct_respondeu": "39.4",
+    "media_aumento_faturamento_pct": "25.2"
+  },
+  {
+    "vertical": "Turismo e Agronegocio",
+    "clientes_na_carteira": "320",
+    "pj_distintos": "58",
+    "total_inconsistencias": "2",
+    "respondeu_pesquisa": "105",
+    "pct_respondeu": "32.8",
+    "media_aumento_faturamento_pct": "22.0"
+  }
+]
