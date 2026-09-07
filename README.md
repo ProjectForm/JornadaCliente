@@ -63,9 +63,9 @@ python adicionar_cliente.py   # menu interativo: login por ID de gestor, depois 
 
 ## 5. Demo publicada (site + sandbox ao vivo)
 
-**[jornada-cliente-dashboard.vercel.app](https://jornada-cliente-dashboard-4ytdsddb7-juans-projects-8d3a43dc.vercel.app)** —
+**[jornada-clienteweb.vercel.app](https://jornada-clienteweb.vercel.app)** —
 link público, sem precisar rodar nada localmente (`web/`, hospedado no
-Vercel):
+Vercel, deploy automático a cada push no repositório):
 
 - **Painel de KPIs** e gráficos (PJ Distintos por vertical, status,
   ranking de gestores) — estáticos, gerados por `export_web_data.py` a partir
@@ -138,8 +138,8 @@ to `log_alteracoes` (who, when, field, old → new value) and immediately
 re-exports the CSVs in `data/reports/`, so Power BI only needs a refresh to
 reflect the change.
 
-**Live demo:** [jornada-cliente-dashboard.vercel.app](https://jornada-cliente-dashboard-4ytdsddb7-juans-projects-8d3a43dc.vercel.app) —
-no local setup needed. KPIs/charts, a searchable/filterable browser over the
+**Live demo:** [jornada-clienteweb.vercel.app](https://jornada-clienteweb.vercel.app) —
+no local setup needed, auto-deployed on every push. KPIs/charts, a searchable/filterable browser over the
 2500 synthetic clients, and a live public sandbox (real Postgres via
 Supabase, RLS + PL/pgSQL functions mirroring `permissoes.py`) where anyone
 can try including/editing a client and see the vertical-permission rule
