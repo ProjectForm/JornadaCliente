@@ -10,20 +10,28 @@ O Power BI Desktop nao tem conector nativo para SQLite. Duas formas de conectar:
    controle_gestor = pd.read_sql("SELECT * FROM v_controle_gestor", conn)
    controle_vertical = pd.read_sql("SELECT * FROM v_controle_vertical", conn)
    gestores = pd.read_sql("SELECT * FROM gestores", conn)
+   log_alteracoes = pd.read_sql("SELECT * FROM log_alteracoes", conn)
 
-Atualizacao: rode `python etl_pipeline.py` apos nova base de atendimentos,
-depois clique "Atualizar" no Power BI.
+Atualizacao: rode `python etl_pipeline.py` apos nova base de atendimentos, ou
+use o CLI do gestor (`python adicionar_cliente.py`) para incluir/editar/excluir
+clientes direto no banco -- toda operacao de escrita ja reexporta os CSVs em
+`data/reports/`. Depois e so clicar "Atualizar" no Power BI (ou apontar
+direto pra `data/reports/*.csv`, que e o formato mais simples de conectar).
 
 ## 2. Tabelas do modelo
-- Clientes <- v_dados_cliente (fato, 1 linha por cliente)
+- Clientes <- v_dados_cliente (fato, 1 linha por cliente; ja filtra clientes
+  excluidos via soft delete, `ativo = 1`)
 - Gestores <- gestores (dimensao)
 - ControlePorGestor <- v_controle_gestor (agregado)
 - ControlePorVertical <- v_controle_vertical (agregado)
 - Planos / CentrosCusto <- planos / centros_custo (dimensoes de regra)
+- LogAlteracoes <- log_alteracoes (auditoria: toda inclusao/edicao/exclusao
+  feita pelos gestores via CLI, com quem alterou, quando, e valor antigo/novo)
 
 ## 3. Relacionamentos
 Gestores[gestor_id] 1 -- * Clientes[gestor_id]
 Gestores[gestor_id] 1 -- 1 ControlePorGestor[gestor_id]
+Gestores[gestor_id] 1 -- * LogAlteracoes[gestor_id_operador]
 
 ## 4. Medidas DAX principais
 Total Clientes = COUNTROWS(Clientes)
@@ -48,6 +56,9 @@ Status Semaforo =
 - Distribuicao de aumento de faturamento entre quem respondeu.
 - Segmentacao por Vertical, Gestor, Status.
 - Pagina de detalhe por cliente com drill-through.
+- Pagina de auditoria: LogAlteracoes por gestor/vertical/operacao (INSERT/UPDATE/DELETE)
+  ao longo do tempo -- mostra quem mexeu em que carteira, incluindo edicoes
+  entre gestores parceiros de vertical.
 
 ## 6. Por que separar em views SQL em vez de fazer tudo em DAX
 A regra de negocio ja esta resolvida nas views (v_classificacao_plano /

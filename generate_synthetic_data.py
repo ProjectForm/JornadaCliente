@@ -105,6 +105,7 @@ for i in range(1, N_CLIENTES + 1):
         "porte": sorteia_porte(),
         "gestor_id": gestor["gestor_id"],
         "data_cadastro": (date(2025, 1, 1) + timedelta(days=random.randint(0, 500))).isoformat(),
+        "ativo": 1,
     })
 
 atendimentos = []
@@ -133,6 +134,7 @@ for c in clientes:
             "data_atendimento": (date(2025, 2, 1) + timedelta(days=random.randint(0, 400))).isoformat(),
             "frequencia": 1,
             "atendimento_valido": valido,
+            "ativo": 1,
         })
         atend_id += 1
 
@@ -166,9 +168,9 @@ write_csv("planos.csv", [{"plano_id": p["plano_id"], "nome": p["nome"], "regra":
           ["plano_id", "nome", "regra", "porte_elegivel"])
 write_csv("centros_custo.csv", CENTROS_CUSTO, ["centro_custo_id", "codigo", "plano_id"])
 write_csv("produtos.csv", PRODUTOS, ["produto_id", "nome", "tipo"])
-write_csv("clientes.csv", clientes, ["cliente_id", "razao_social", "cnpj", "porte", "gestor_id", "data_cadastro"])
+write_csv("clientes.csv", clientes, ["cliente_id", "razao_social", "cnpj", "porte", "gestor_id", "data_cadastro", "ativo"])
 write_csv("atendimentos.csv", atendimentos,
-          ["atendimento_id", "cliente_id", "centro_custo_id", "produto_id", "data_atendimento", "frequencia", "atendimento_valido"])
+          ["atendimento_id", "cliente_id", "centro_custo_id", "produto_id", "data_atendimento", "frequencia", "atendimento_valido", "ativo"])
 write_csv("pesquisa_faturamento.csv", pesquisa, ["cliente_id", "respondeu", "aumento_faturamento_pct", "data_resposta"])
 
 print("\nResumo:")

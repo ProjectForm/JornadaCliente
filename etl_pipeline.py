@@ -81,6 +81,7 @@ def exportar_relatorios(conn):
         "dados_cliente.csv": "SELECT * FROM v_dados_cliente",
         "controle_gestor.csv": "SELECT * FROM v_controle_gestor",
         "controle_vertical.csv": "SELECT * FROM v_controle_vertical",
+        "log_alteracoes.csv": "SELECT * FROM log_alteracoes ORDER BY log_id",
     }
     for filename, query in exports.items():
         cur = conn.execute(query)
@@ -109,10 +110,10 @@ def main():
     n_cc = carregar_csv(conn, "centros_custo", "centros_custo.csv", ["centro_custo_id", "codigo", "plano_id"])
     n_prod = carregar_csv(conn, "produtos", "produtos.csv", ["produto_id", "nome", "tipo"])
     n_cli = carregar_csv(conn, "clientes", "clientes.csv",
-                          ["cliente_id", "razao_social", "cnpj", "porte", "gestor_id", "data_cadastro"])
+                          ["cliente_id", "razao_social", "cnpj", "porte", "gestor_id", "data_cadastro", "ativo"])
     n_atend = carregar_csv(conn, "atendimentos", "atendimentos.csv",
                             ["atendimento_id", "cliente_id", "centro_custo_id", "produto_id",
-                             "data_atendimento", "frequencia", "atendimento_valido"])
+                             "data_atendimento", "frequencia", "atendimento_valido", "ativo"])
     n_pesq = carregar_csv(conn, "pesquisa_faturamento", "pesquisa_faturamento.csv",
                            ["cliente_id", "respondeu", "aumento_faturamento_pct", "data_resposta"])
     conn.commit()
@@ -133,7 +134,7 @@ def main():
     log("5/6 Criando views de classificacao/validacao (regras de negocio em SQL)...")
     criar_views(conn)
 
-    log("6/6 Exportando relatorios finais (dados_cliente, controle_gestor, controle_vertical)...")
+    log("6/6 Exportando relatorios finais (dados_cliente, controle_gestor, controle_vertical, log_alteracoes)...")
     exports = exportar_relatorios(conn)
 
     total = time.perf_counter() - t0

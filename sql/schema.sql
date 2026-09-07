@@ -52,7 +52,8 @@ CREATE TABLE clientes (
     data_cadastro   TEXT NOT NULL,
     municipio       TEXT,
     razao_social_api TEXT,
-    api_consultado_em TEXT
+    api_consultado_em TEXT,
+    ativo           INTEGER NOT NULL DEFAULT 1 CHECK (ativo IN (0, 1))
 );
 
 -- BASE: atendimentos brutos (equivalente a exportacao do BI/CRM)
@@ -64,7 +65,8 @@ CREATE TABLE atendimentos (
     produto_id          INTEGER NOT NULL REFERENCES produtos(produto_id),
     data_atendimento    TEXT NOT NULL,
     frequencia          INTEGER NOT NULL DEFAULT 1,
-    atendimento_valido  INTEGER NOT NULL CHECK (atendimento_valido IN (0, 1))
+    atendimento_valido  INTEGER NOT NULL CHECK (atendimento_valido IN (0, 1)),
+    ativo               INTEGER NOT NULL DEFAULT 1 CHECK (ativo IN (0, 1))
 );
 
 DROP TABLE IF EXISTS pesquisa_faturamento;
@@ -80,3 +82,19 @@ CREATE INDEX idx_atend_cc ON atendimentos(centro_custo_id);
 CREATE INDEX idx_atend_produto ON atendimentos(produto_id);
 CREATE INDEX idx_cliente_gestor ON clientes(gestor_id);
 CREATE INDEX idx_cc_plano ON centros_custo(plano_id);
+
+-- ============================================================================
+-- AUDITORIA: log de inclusao/edicao/exclusao feita pelos gestores via CLI
+-- ============================================================================
+DROP TABLE IF EXISTS log_alteracoes;
+CREATE TABLE log_alteracoes (
+    log_id              INTEGER PRIMARY KEY,
+    tabela              TEXT NOT NULL CHECK (tabela IN ('clientes', 'atendimentos')),
+    registro_id         INTEGER NOT NULL,
+    operacao            TEXT NOT NULL CHECK (operacao IN ('INSERT', 'UPDATE', 'DELETE')),
+    campo               TEXT,
+    valor_antigo        TEXT,
+    valor_novo          TEXT,
+    gestor_id_operador  INTEGER NOT NULL REFERENCES gestores(gestor_id),
+    timestamp           TEXT NOT NULL
+);

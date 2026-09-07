@@ -35,9 +35,33 @@ sql/queries.sql                →  views de classificação (3. TRATAMENTO — 
 data/reports/*.csv             →  saída consolidada       (4. DASHBOARD — pronta para o Power BI)
 analysis/exploratory_analysis.py → data/reports/*.png    (análise exploratória em Pandas)
 powerbi/modelo_de_dados_e_dax.md → modelo + medidas DAX  (camada de visualização)
+adicionar_cliente.py + permissoes.py → log_alteracoes    (CLI do gestor: inclusão/edição/exclusão com permissão por vertical)
 ```
 
-## 4. Como rodar
+## 4. Inclusão/edição pelo gestor, com permissão por vertical
+
+Além do pipeline automático, `adicionar_cliente.py` é um CLI que o próprio
+gestor usa para mexer na carteira sem esperar a próxima carga completa:
+
+- **Incluir** cliente/atendimento — sempre atribuído ao gestor que está logado.
+- **Editar** dados cadastrais, **reatribuir** o gestor responsável e **excluir**
+  cliente/atendimento (soft delete — o registro some do dashboard, mas o
+  histórico é preservado).
+- **Permissão por vertical**: um gestor só mexe em clientes que são dele, ou
+  de um colega da mesma vertical (ex.: se Cris, Simone e Gui Tresso são da
+  mesma vertical, qualquer um deles pode editar a carteira dos outros dois —
+  ver `permissoes.py`). Fora da vertical, a operação é bloqueada com erro.
+- **Auditoria**: toda inclusão/edição/exclusão grava uma linha em
+  `log_alteracoes` (quem, quando, campo alterado, valor antigo → novo).
+- **Reflexo no BI**: cada operação de escrita já recria as views e reexporta
+  os CSVs de `data/reports/` (inclusive `log_alteracoes.csv`), então o Power
+  BI só precisa de um "Atualizar" para refletir a mudança.
+
+```bash
+python adicionar_cliente.py   # menu interativo: login por ID de gestor, depois incluir/editar/excluir
+```
+
+## 5. Como rodar
 
 ```bash
 python -m venv .venv && source .venv/bin/activate   # opcional
@@ -49,14 +73,14 @@ python adicionar_cliente.py               # opcional — inclusão manual de cli
 pytest                                    # roda os testes da regra de negócio
 ```
 
-## 5. Resultado
+## 6. Resultado
 
 Ver "RESUMO DA EXECUCAO" impresso pelo `etl_pipeline.py` — os números variam
 levemente a cada ajuste no gerador, mas com a seed fixa (`random.seed(42)`)
 a saída é **100% reprodutível**: qualquer pessoa que rodar este repositório
 localmente vai reproduzir exatamente os mesmos números impressos no terminal.
 
-## 6. Stack
+## 7. Stack
 
 Python (stdlib: `sqlite3`, `csv`) para o pipeline · SQL (views) para a lógica
 de negócio · Pandas/Matplotlib para análise exploratória · Power BI (DAX) para
@@ -80,12 +104,25 @@ flagged invalid due to a data-entry/integration error.
 (SQL views) → dashboard (Power BI), plus a Pandas-based exploratory analysis
 layer and pytest tests covering the classification rule.
 
+**Manager-driven inclusion/editing, with vertical-based permission:** beyond
+the automated pipeline, `adicionar_cliente.py` is a CLI managers use to touch
+their portfolio without waiting for the next full load — include a client
+(always assigned to the logged-in manager), edit master data, reassign the
+responsible manager, or delete a client/interaction (soft delete — the record
+disappears from the dashboard but the history is preserved). Permission is
+scoped by vertical: a manager can only touch clients that are their own, or a
+peer's within the same vertical (see `permissoes.py`); every write is logged
+to `log_alteracoes` (who, when, field, old → new value) and immediately
+re-exports the CSVs in `data/reports/`, so Power BI only needs a refresh to
+reflect the change.
+
 Run:
 ```bash
 pip install -r requirements.txt
 python generate_synthetic_data.py
 python etl_pipeline.py
-python analysis/exploratory_analysis.py
+python analysis/exploratory_analysis.py   # optional -- Pandas/Matplotlib charts
+python adicionar_cliente.py               # optional -- manager CLI (include/edit/delete)
 pytest
 ```
 

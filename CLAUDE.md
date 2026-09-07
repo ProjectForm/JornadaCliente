@@ -23,7 +23,12 @@ ser 100% público e sintético.
 4. `brasilapi_mock.py` — mock local de enriquecimento via API (simula BrasilAPI)
 5. `etl_pipeline.py` — orquestra tudo: cria schema → carrega CSVs → enriquece via API mock → cria views → exporta `data/reports/*.csv`
 6. `analysis/exploratory_analysis.py` — camada de análise em Pandas (separada do pipeline de propósito — ver docstring do arquivo)
-7. `adicionar_cliente.py` — CLI para simular inclusão manual de cliente/atendimento e recálculo incremental
+7. `adicionar_cliente.py` — CLI do gestor: incluir cliente/atendimento, editar
+   dados cadastrais, reatribuir gestor responsável e excluir cliente/atendimento
+   (soft delete), com recálculo incremental e reexportação automática dos CSVs
+   do BI. Permissão controlada por `permissoes.py` (dono do cliente, ou
+   qualquer gestor da mesma vertical, pode editar/excluir/reatribuir); toda
+   alteração é registrada em `log_alteracoes` (auditoria)
 8. `powerbi/modelo_de_dados_e_dax.md` — documentação do modelo de dados e medidas DAX (não há .pbix no repo — Power BI Desktop não roda neste ambiente)
 9. `tests/test_pipeline.py` — pytest cobrindo a regra de negócio (classificação/inconsistência) e o mock de CNPJ
 

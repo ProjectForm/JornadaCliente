@@ -18,6 +18,7 @@ SELECT
 FROM atendimentos a
 JOIN produtos p        ON p.produto_id = a.produto_id
 JOIN centros_custo cc  ON cc.centro_custo_id = a.centro_custo_id
+WHERE a.ativo = 1
 GROUP BY a.cliente_id, cc.plano_id;
 
 DROP VIEW IF EXISTS v_classificacao_plano;
@@ -79,7 +80,7 @@ SELECT
     c.cliente_id,
     CASE
         WHEN COALESCE(r.qtd_planos_concluidos, 0) >= 1 THEN 'Concluinte'
-        WHEN NOT EXISTS (SELECT 1 FROM atendimentos a WHERE a.cliente_id = c.cliente_id) THEN 'Sem atendimento'
+        WHEN NOT EXISTS (SELECT 1 FROM atendimentos a WHERE a.cliente_id = c.cliente_id AND a.ativo = 1) THEN 'Sem atendimento'
         ELSE 'Participante'
     END AS status
 FROM clientes c
@@ -109,7 +110,8 @@ FROM clientes c
 JOIN gestores g              ON g.gestor_id = c.gestor_id
 JOIN v_cliente_status s      ON s.cliente_id = c.cliente_id
 LEFT JOIN v_cliente_resumo r ON r.cliente_id = c.cliente_id
-LEFT JOIN pesquisa_faturamento pf ON pf.cliente_id = c.cliente_id;
+LEFT JOIN pesquisa_faturamento pf ON pf.cliente_id = c.cliente_id
+WHERE c.ativo = 1;
 
 DROP VIEW IF EXISTS v_controle_gestor;
 CREATE VIEW v_controle_gestor AS
