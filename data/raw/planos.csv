@@ -1,0 +1,5 @@
+plano_id,nome,regra,porte_elegivel
+1,Plano A - Crescimento,DIAG_2ASSESSORIA,MEI|ME|EPP
+2,Plano B - Projetos Especiais,DIAG_2ASSESSORIA,MEI|ME|EPP
+3,Plano C - Parcerias Corporativas,DIAG_2ASSESSORIA,MEI|ME|EPP
+4,Plano D - Sustentabilidade,QUALQUER_SOLUCAO,ME|EPP

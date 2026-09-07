@@ -1,0 +1,17 @@
+gestor_id,gestor,vertical,clientes_na_carteira,pj_distintos,total_inconsistencias,clientes_sem_atendimento,respondeu_pesquisa,pct_respondeu,media_aumento_faturamento_pct
+4,Diego Alves,Atendimento ao Cliente,169,21,3,20,62,36.7,24.3
+11,Karina Reis,Atendimento ao Cliente,156,27,2,14,46,29.5,25.4
+1,Ana Souza,Comercio e Servicos,145,23,1,18,53,36.6,22.5
+8,Hugo Ramos,Comercio e Servicos,160,22,0,25,51,31.9,19.7
+15,Olivia Prado,Comercio e Servicos,153,21,1,12,52,34.0,26.6
+6,Fabio Nunes,Consultoria Especializada,143,15,3,15,61,42.7,19.4
+13,Mariana Teles,Consultoria Especializada,172,25,1,21,68,39.5,23.3
+5,Elisa Rocha,Empreendedorismo Cultural,167,29,1,21,61,36.5,22.5
+12,Lucas Barros,Empreendedorismo Cultural,137,27,4,8,54,39.4,23.0
+7,Giovana Melo,Sustentabilidade,152,25,0,20,54,35.5,19.3
+14,Nicolas Vieira,Sustentabilidade,161,25,1,16,69,42.9,26.4
+2,Bruno Lima,Tecnologia e Inovacao,145,27,0,23,62,42.8,23.3
+9,Iara Costa,Tecnologia e Inovacao,139,25,1,19,49,35.3,23.6
+16,Paulo Cezar,Tecnologia e Inovacao,181,35,0,14,72,39.8,27.9
+3,Carla Dias,Turismo e Agronegocio,161,30,2,17,46,28.6,22.3
+10,Joao Pedro,Turismo e Agronegocio,159,28,0,27,59,37.1,21.7

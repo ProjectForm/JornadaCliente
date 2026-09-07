@@ -1,0 +1,8 @@
+produto_id,nome,tipo
+101,Diagnostico Momento Empresarial,DIAGNOSTICO
+102,Diagnostico Estrategia de Crescimento,DIAGNOSTICO
+201,Assessoria de Negocios,ASSESSORIA
+301,Consultoria de Encerramento,OTA
+302,Orientacao Tecnica Geral,OTA
+401,Solucao Sustentabilidade Basica,SUSTENTABILIDADE
+402,Solucao Sustentabilidade Avancada,SUSTENTABILIDADE
