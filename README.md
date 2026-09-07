@@ -61,7 +61,27 @@ gestor usa para mexer na carteira sem esperar a próxima carga completa:
 python adicionar_cliente.py   # menu interativo: login por ID de gestor, depois incluir/editar/excluir
 ```
 
-## 5. Como rodar
+## 5. Demo publicada (site + sandbox ao vivo)
+
+**[jornada-cliente-dashboard.vercel.app](https://jornada-cliente-dashboard-4ytdsddb7-juans-projects-8d3a43dc.vercel.app)** —
+link público, sem precisar rodar nada localmente (`web/`, hospedado no
+Vercel):
+
+- **Painel de KPIs** e gráficos (PJ Distintos por vertical, status,
+  ranking de gestores) — estáticos, gerados por `export_web_data.py` a partir
+  de `data/reports/*.csv`.
+- **Base de clientes** navegável (busca, filtro por vertical/gestor/status,
+  paginação) com os 2500 clientes sintéticos.
+- **Sandbox de inclusão ao vivo** — banco Postgres real (Supabase),
+  separado do dataset acima, onde qualquer visitante testa incluir/editar/
+  excluir cliente e vê a regra de permissão por vertical bloqueando edição
+  entre gestores de verticais diferentes, na prática. Schema, RLS e as
+  funções que replicam `permissoes.py` em PL/pgSQL ficam em
+  `supabase/schema_demo.sql`.
+- **Relatório Power BI** publicado embutido (quando o link de "Publicar na
+  Web" estiver preenchido — ver `powerbi/modelo_de_dados_e_dax.md`, seção 7).
+
+## 6. Como rodar
 
 ```bash
 python -m venv .venv && source .venv/bin/activate   # opcional
@@ -70,21 +90,23 @@ python generate_synthetic_data.py
 python etl_pipeline.py
 python analysis/exploratory_analysis.py   # opcional — gera gráficos com Pandas/Matplotlib
 python adicionar_cliente.py               # opcional — inclusão manual de cliente
+python export_web_data.py                 # opcional — regenera web/data/*.json (site publicado)
 pytest                                    # roda os testes da regra de negócio
 ```
 
-## 6. Resultado
+## 7. Resultado
 
 Ver "RESUMO DA EXECUCAO" impresso pelo `etl_pipeline.py` — os números variam
 levemente a cada ajuste no gerador, mas com a seed fixa (`random.seed(42)`)
 a saída é **100% reprodutível**: qualquer pessoa que rodar este repositório
 localmente vai reproduzir exatamente os mesmos números impressos no terminal.
 
-## 7. Stack
+## 8. Stack
 
 Python (stdlib: `sqlite3`, `csv`) para o pipeline · SQL (views) para a lógica
 de negócio · Pandas/Matplotlib para análise exploratória · Power BI (DAX) para
-o dashboard final · pytest para validar a regra de classificação.
+o dashboard final · pytest para validar a regra de classificação · HTML/CSS/JS
++ Supabase (Postgres/RLS) para o site publicado e o sandbox ao vivo.
 
 ---
 ## English version
@@ -115,6 +137,13 @@ peer's within the same vertical (see `permissoes.py`); every write is logged
 to `log_alteracoes` (who, when, field, old → new value) and immediately
 re-exports the CSVs in `data/reports/`, so Power BI only needs a refresh to
 reflect the change.
+
+**Live demo:** [jornada-cliente-dashboard.vercel.app](https://jornada-cliente-dashboard-4ytdsddb7-juans-projects-8d3a43dc.vercel.app) —
+no local setup needed. KPIs/charts, a searchable/filterable browser over the
+2500 synthetic clients, and a live public sandbox (real Postgres via
+Supabase, RLS + PL/pgSQL functions mirroring `permissoes.py`) where anyone
+can try including/editing a client and see the vertical-permission rule
+block a cross-vertical edit in real time (`supabase/schema_demo.sql`).
 
 Run:
 ```bash

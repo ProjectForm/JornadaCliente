@@ -31,6 +31,12 @@ ser 100% público e sintético.
    alteração é registrada em `log_alteracoes` (auditoria)
 8. `powerbi/modelo_de_dados_e_dax.md` — documentação do modelo de dados e medidas DAX (não há .pbix no repo — Power BI Desktop não roda neste ambiente)
 9. `tests/test_pipeline.py` — pytest cobrindo a regra de negócio (classificação/inconsistência) e o mock de CNPJ
+10. `export_web_data.py` + `web/` — dashboard estático publicado (Vercel,
+    `jornada-cliente-dashboard`), sem dependência de Python no visitante:
+    KPIs/gráficos a partir de `data/reports/*.csv`, base de clientes navegável,
+    e um sandbox de inclusão ao vivo em banco real (Supabase/Postgres,
+    separado do dataset principal) cujo schema/RLS/funções ficam em
+    `supabase/schema_demo.sql` (replica `permissoes.py` em PL/pgSQL)
 
 ## Fluxo de trabalho
 

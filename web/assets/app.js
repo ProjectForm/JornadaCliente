@@ -143,6 +143,78 @@ function montarLog(logAlteracoes) {
   `).join("");
 }
 
+const CLIENTES_POR_PAGINA = 25;
+let clientesEstado = { todos: [], filtrados: [], pagina: 1 };
+
+function montarFiltrosClientes(clientes) {
+  const verticais = [...new Set(clientes.map((c) => c.vertical))].sort();
+  const gestores = [...new Set(clientes.map((c) => c.gestor))].sort();
+
+  const selVertical = document.getElementById("clientes-filtro-vertical");
+  verticais.forEach((v) => selVertical.insertAdjacentHTML("beforeend", `<option value="${v}">${v}</option>`));
+
+  const selGestor = document.getElementById("clientes-filtro-gestor");
+  gestores.forEach((g) => selGestor.insertAdjacentHTML("beforeend", `<option value="${g}">${g}</option>`));
+}
+
+function aplicarFiltrosClientes() {
+  const busca = document.getElementById("clientes-busca").value.trim().toLowerCase();
+  const vertical = document.getElementById("clientes-filtro-vertical").value;
+  const gestor = document.getElementById("clientes-filtro-gestor").value;
+  const status = document.getElementById("clientes-filtro-status").value;
+
+  clientesEstado.filtrados = clientesEstado.todos.filter((c) => {
+    if (busca && !c.razao_social.toLowerCase().includes(busca) && !c.cnpj.includes(busca)) return false;
+    if (vertical && c.vertical !== vertical) return false;
+    if (gestor && c.gestor !== gestor) return false;
+    if (status && c.status !== status) return false;
+    return true;
+  });
+  clientesEstado.pagina = 1;
+  renderizarTabelaClientes();
+}
+
+function renderizarTabelaClientes() {
+  const { filtrados, pagina } = clientesEstado;
+  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / CLIENTES_POR_PAGINA));
+  const inicio = (pagina - 1) * CLIENTES_POR_PAGINA;
+  const pageRows = filtrados.slice(inicio, inicio + CLIENTES_POR_PAGINA);
+
+  const tbody = document.querySelector("#table-clientes tbody");
+  tbody.innerHTML = pageRows.map((c) => `
+    <tr>
+      <td>${c.razao_social}${c.pj_distinto_oficial === "1" ? ' <span title="PJ Distinto" style="color:var(--status-good)">&#10003;</span>' : ""}</td>
+      <td>${c.cnpj}</td>
+      <td>${c.porte}</td>
+      <td>${c.municipio || "--"}</td>
+      <td>${c.gestor}</td>
+      <td>${c.vertical}</td>
+      <td>${c.status}</td>
+    </tr>
+  `).join("") || `<tr><td colspan="7" style="color:var(--text-muted)">Nenhum cliente encontrado com esses filtros.</td></tr>`;
+
+  const pager = document.getElementById("clientes-pager");
+  pager.innerHTML = `
+    <button id="pg-prev" ${pagina <= 1 ? "disabled" : ""}>&larr; Anterior</button>
+    <span>Pagina ${pagina} de ${totalPaginas} &middot; ${filtrados.length} clientes</span>
+    <button id="pg-next" ${pagina >= totalPaginas ? "disabled" : ""}>Proxima &rarr;</button>
+  `;
+  document.getElementById("pg-prev")?.addEventListener("click", () => { clientesEstado.pagina--; renderizarTabelaClientes(); });
+  document.getElementById("pg-next")?.addEventListener("click", () => { clientesEstado.pagina++; renderizarTabelaClientes(); });
+}
+
+function montarBaseClientes(clientes) {
+  clientesEstado.todos = clientes;
+  clientesEstado.filtrados = clientes;
+  montarFiltrosClientes(clientes);
+  renderizarTabelaClientes();
+
+  ["clientes-busca"].forEach((id) => document.getElementById(id).addEventListener("input", aplicarFiltrosClientes));
+  ["clientes-filtro-vertical", "clientes-filtro-gestor", "clientes-filtro-status"].forEach((id) =>
+    document.getElementById(id).addEventListener("change", aplicarFiltrosClientes)
+  );
+}
+
 function montarPowerBI() {
   const container = document.getElementById("powerbi-embed");
   if (POWERBI_EMBED_URL) {
@@ -159,17 +231,19 @@ function montarPowerBI() {
 
 async function init() {
   try {
-    const [resumo, controleVertical, controleGestor, logAlteracoes] = await Promise.all([
+    const [resumo, controleVertical, controleGestor, logAlteracoes, clientes] = await Promise.all([
       carregarJSON("data/resumo.json"),
       carregarJSON("data/controle_vertical.json"),
       carregarJSON("data/controle_gestor.json"),
       carregarJSON("data/log_alteracoes.json"),
+      carregarJSON("data/clientes.json"),
     ]);
     montarKPIs(resumo);
     montarBarChartVertical(controleVertical);
     montarStatusChart(resumo);
     montarTabelaGestores(controleGestor);
     montarLog(logAlteracoes);
+    montarBaseClientes(clientes);
   } catch (err) {
     console.error(err);
     document.getElementById("kpi-row").innerHTML =

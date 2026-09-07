@@ -4,8 +4,10 @@ Vercel). Le data/reports/*.csv (ja produzidos por etl_pipeline.py) e nao
 recalcula nenhuma regra de negocio -- so agrega/serializa o que as views SQL
 ja resolveram.
 
-Nao inclui os 2500 clientes individuais no site (mantem a pagina leve): o
-drill-down por cliente fica a cargo do relatorio Power BI publicado.
+Exporta tambem a base de clientes inteira (clientes.json) para a tabela
+navegavel (busca/filtro/paginacao) do site -- so os campos usados na tela,
+para manter o arquivo leve. O drill-through com todas as colunas e o
+historico de planos fica a cargo do relatorio Power BI publicado.
 
 Uso:
     python etl_pipeline.py       # gera data/reports/*.csv
@@ -56,6 +58,16 @@ def gerar_resumo(dados_cliente):
     }
 
 
+CAMPOS_CLIENTE_WEB = (
+    "cliente_id", "razao_social", "cnpj", "porte", "municipio",
+    "gestor", "vertical", "status", "pj_distinto_oficial",
+)
+
+
+def gerar_clientes(dados_cliente):
+    return [{campo: c[campo] for campo in CAMPOS_CLIENTE_WEB} for c in dados_cliente]
+
+
 def main():
     os.makedirs(WEB_DATA_DIR, exist_ok=True)
 
@@ -69,6 +81,7 @@ def main():
         "controle_vertical.json": controle_vertical,
         "controle_gestor.json": controle_gestor,
         "log_alteracoes.json": list(reversed(log_alteracoes))[:20],  # mais recentes primeiro
+        "clientes.json": gerar_clientes(dados_cliente),
     }
 
     for nome, conteudo in exports.items():

@@ -16,7 +16,8 @@
       <h1>Painel de Acompanhamento de Carteira</h1>
     </div>
     <nav class="header-links">
-      <a href="https://github.com/ProjectForm/JornadaCliente" target="_blank" rel="noopener">Ver codigo no GitHub</a>
+      <a href="https://github.com/ProjectForm/JornadaCliente" target="_blank" rel="noopener">Codigo no GitHub</a>
+      <a href="#demo-inclusao">Simular inclusao</a>
       <a href="#powerbi" class="btn-ghost">Ver no Power BI</a>
     </nav>
   </div>
@@ -70,6 +71,102 @@
       </div>
       <div id="chart-status" class="stacked-bar" role="img" aria-label="Grafico: distribuicao de clientes por status"></div>
       <ul class="legend" id="legend-status"></ul>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Base de clientes</h2>
+      <p class="card-sub">Os 2500 clientes sinteticos do dataset -- busca, filtro e paginacao (somente leitura)</p>
+    </div>
+    <div class="filters-row">
+      <input type="search" id="clientes-busca" placeholder="Buscar por razao social ou CNPJ..." class="input-search">
+      <select id="clientes-filtro-vertical" class="input-select"><option value="">Todas as verticais</option></select>
+      <select id="clientes-filtro-gestor" class="input-select"><option value="">Todos os gestores</option></select>
+      <select id="clientes-filtro-status" class="input-select">
+        <option value="">Todos os status</option>
+        <option value="Concluinte">Concluinte</option>
+        <option value="Participante">Participante</option>
+        <option value="Sem atendimento">Sem atendimento</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table" id="table-clientes">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>CNPJ</th>
+            <th>Porte</th>
+            <th>Municipio</th>
+            <th>Gestor</th>
+            <th>Vertical</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="pager" id="clientes-pager"></div>
+  </section>
+
+  <section class="card demo-card" id="demo-inclusao">
+    <div class="card-head">
+      <h2>Simular inclusao de cliente (ao vivo)</h2>
+      <p class="card-sub">
+        Sandbox publico separado do dataset acima -- banco real (Supabase/Postgres),
+        alimentado por quem testar aqui. Escolha um gestor, inclua um cliente,
+        e tente editar o cliente de um colega de vertical (permitido) ou de
+        outra vertical (bloqueado pela mesma regra de <code>permissoes.py</code>).
+      </p>
+    </div>
+
+    <div class="demo-grid">
+      <form id="demo-form" class="demo-form">
+        <label>Voce e
+          <select id="demo-gestor-atual" required></select>
+        </label>
+        <label>Razao social
+          <input type="text" id="demo-razao-social" maxlength="80" required placeholder="Ex: Comercial Exemplo Ltda">
+        </label>
+        <label>CNPJ
+          <input type="text" id="demo-cnpj" maxlength="20" required placeholder="00000000000100">
+        </label>
+        <label>Porte
+          <select id="demo-porte" required>
+            <option value="MEI">MEI</option>
+            <option value="ME">ME</option>
+            <option value="EPP">EPP</option>
+            <option value="MEDIA">MEDIA</option>
+            <option value="GRANDE">GRANDE</option>
+          </select>
+        </label>
+        <button type="submit" class="btn-primary">Incluir cliente</button>
+        <p class="demo-feedback" id="demo-feedback" hidden></p>
+      </form>
+
+      <div class="demo-list">
+        <h3>Clientes incluidos no sandbox</h3>
+        <div class="table-wrap">
+          <table class="data-table" id="table-demo-clientes">
+            <thead>
+              <tr><th>Cliente</th><th>Porte</th><th>Gestor</th><th>Vertical</th><th></th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="empty-state" id="demo-clientes-empty" hidden>Ninguem incluiu um cliente ainda -- seja o primeiro, usando o formulario ao lado.</p>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <h3>Log de alteracoes do sandbox</h3>
+      <table class="data-table" id="table-demo-log">
+        <thead>
+          <tr><th>Quando</th><th>Operacao</th><th>Campo</th><th>Antigo &rarr; Novo</th><th>Gestor</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <p class="empty-state" id="demo-log-empty" hidden>Nenhuma alteracao no sandbox ainda.</p>
     </div>
   </section>
 
@@ -138,6 +235,8 @@
   </div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="assets/app.js"></script>
+<script src="assets/supabase-demo.js"></script>
 </body>
 </html>
