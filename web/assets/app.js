@@ -203,7 +203,13 @@ function renderizarTabelaClientes() {
   document.getElementById("pg-next")?.addEventListener("click", () => { clientesEstado.pagina++; renderizarTabelaClientes(); });
 }
 
-function montarBaseClientes(clientes) {
+function converterClientesColunar(payload) {
+  const { colunas, linhas } = payload;
+  return linhas.map((linha) => Object.fromEntries(colunas.map((col, i) => [col, linha[i]])));
+}
+
+function montarBaseClientes(clientesPayload) {
+  const clientes = converterClientesColunar(clientesPayload);
   clientesEstado.todos = clientes;
   clientesEstado.filtrados = clientes;
   montarFiltrosClientes(clientes);

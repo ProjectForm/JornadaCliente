@@ -65,7 +65,13 @@ CAMPOS_CLIENTE_WEB = (
 
 
 def gerar_clientes(dados_cliente):
-    return [{campo: c[campo] for campo in CAMPOS_CLIENTE_WEB} for c in dados_cliente]
+    """Formato colunar (colunas + linhas) em vez de lista de objetos --
+    evita repetir os nomes dos campos em cada uma das 2500 linhas, o que
+    reduz bastante o tamanho do arquivo baixado pelo navegador."""
+    return {
+        "colunas": list(CAMPOS_CLIENTE_WEB),
+        "linhas": [[c[campo] for campo in CAMPOS_CLIENTE_WEB] for c in dados_cliente],
+    }
 
 
 def main():
@@ -85,8 +91,12 @@ def main():
     }
 
     for nome, conteudo in exports.items():
+        # clientes.json e grande (2500 linhas) -- sem indentacao, pra nao
+        # inflar o arquivo baixado pelo navegador com espacos em branco.
+        indent = None if nome == "clientes.json" else 2
+        separators = (",", ":") if indent is None else None
         with open(os.path.join(WEB_DATA_DIR, nome), "w", encoding="utf-8") as f:
-            json.dump(conteudo, f, ensure_ascii=False, indent=2)
+            json.dump(conteudo, f, ensure_ascii=False, indent=indent, separators=separators)
         print(f"  web/data/{nome}")
 
     print("OK - dados do site gerados em web/data/")
