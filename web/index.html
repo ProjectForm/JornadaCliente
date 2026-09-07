@@ -9,43 +9,79 @@
 </head>
 <body>
 
-<header class="site-header">
+<header class="site-header" id="site-header">
   <div class="wrap header-row">
-    <div>
-      <p class="eyebrow">Portfolio tecnico &middot; Juan</p>
-      <h1>Painel de Acompanhamento de Carteira</h1>
+    <div class="brand">
+      <span class="brand-mark">Jornada Cliente</span>
+      <span class="brand-tag">&middot; portfolio tecnico</span>
     </div>
     <nav class="header-links">
-      <a href="https://github.com/ProjectForm/JornadaCliente" target="_blank" rel="noopener">Codigo no GitHub</a>
-      <a href="#demo-inclusao">Simular inclusao</a>
-      <a href="#powerbi" class="btn-ghost">Ver no Power BI</a>
+      <a href="#dashboard">Dashboard</a>
+      <a href="#dataset">Base</a>
+      <a href="#demo-inclusao">Sandbox</a>
+      <a href="https://github.com/ProjectForm/JornadaCliente" target="_blank" rel="noopener">GitHub</a>
+      <a href="#powerbi" class="btn-cta">Power BI</a>
     </nav>
   </div>
 </header>
 
 <div class="synthetic-banner">
-  <div class="wrap">
-    <strong>100% dados sinteticos</strong> &mdash; gerados por script (seed fixa), sem qualquer vinculo com clientes, empresas ou dados reais. Reconstrucao publica de um sistema de acompanhamento de carteira desenvolvido originalmente em Excel/VBA.
-  </div>
+  <strong>100% dados sinteticos</strong> &mdash; gerados por script (seed fixa), sem qualquer vinculo com clientes, empresas ou dados reais.
 </div>
 
-<main class="wrap">
+<main>
 
-  <section class="hero">
-    <p>
-      Uma organizacao com <strong>multiplos gestores de carteira</strong> precisa saber, a cada
-      atualizacao da base de atendimentos, quais clientes ja cumpriram a regra de negocio de
-      "conclusao" &mdash; e quais teriam cumprido, se nao fosse um lancamento invalido por erro de
-      digitacao/integracao. Esta e a mesma logica de negocio resolvida com <strong>SQL + Python</strong>
-      em vez de formulas de planilha, com um <strong>CLI para os gestores</strong> incluirem/editarem
-      clientes com permissao por vertical, e um <strong>relatorio Power BI</strong> para a visualizacao final.
+  <!-- 01 — HERO -->
+  <section class="hero-section wrap">
+    <p class="eyebrow" data-reveal>Portfolio &middot; Technical Case</p>
+    <h1 class="hero-title" data-reveal data-reveal-delay="1">Da complexidade dos dados<br>&agrave; decis&atilde;o em segundos.</h1>
+    <p class="hero-sub" data-reveal data-reveal-delay="2">
+      Reconstru&ccedil;&atilde;o p&uacute;blica de uma solu&ccedil;&atilde;o de acompanhamento de carteira
+      desenvolvida originalmente em Excel/VBA &mdash; reimplementada com SQL, Python, Supabase e Power BI.
     </p>
+    <div class="hero-actions" data-reveal data-reveal-delay="3">
+      <a href="#dashboard" class="btn btn-primary">Ver o dashboard</a>
+      <a href="https://github.com/ProjectForm/JornadaCliente" target="_blank" rel="noopener" class="btn btn-ghost">Codigo no GitHub</a>
+    </div>
   </section>
 
-  <section aria-label="Indicadores gerais">
-    <div class="kpi-row" id="kpi-row">
-      <div class="stat-tile skeleton"><span class="stat-label">Total de clientes</span><span class="stat-value">&nbsp;</span></div>
-      <div class="stat-tile skeleton"><span class="stat-label">PJ Distintos</span><span class="stat-value">&nbsp;</span></div>
+  <!-- 02 — IMPACTO -->
+  <section class="wrap section-pad" id="impacto">
+    <div class="section-head" data-reveal>
+      <p class="eyebrow"><span class="index">02</span> Impacto</p>
+      <h2 class="section-title">Uma carteira inteira, entendida de uma vez.</h2>
+      <p class="section-sub">Os mesmos n&uacute;meros que hoje exigiriam cruzar planilhas manualmente.</p>
+    </div>
+
+    <div class="kpi-hero-row" data-reveal>
+      <div class="card kpi-primary">
+        <span class="stat-label">Total de clientes na carteira</span>
+        <span class="stat-value" id="kpi-total-clientes" data-countup="0">0</span>
+      </div>
+      <div class="card kpi-primary">
+        <span class="stat-label">PJ Distintos (regra de conclus&atilde;o cumprida)</span>
+        <span class="stat-value" id="kpi-pj-distintos" data-countup="0">0</span>
+      </div>
+    </div>
+
+    <div class="impact-card" data-reveal style="margin-bottom:20px">
+      <p class="eyebrow" style="justify-content:center">Esfor&ccedil;o manual estimado por ciclo</p>
+      <div class="impact-row" id="impact-figure">
+        <div class="impact-figure is-before">
+          <span class="num" id="impact-before" data-countup="156" data-decimals="0">0</span>
+          <span class="unit">horas</span>
+        </div>
+        <span class="impact-arrow">&rarr;</span>
+        <div class="impact-figure is-after">
+          <span class="num" id="impact-after" data-countup="6" data-decimals="0">0</span>
+          <span class="unit">minutos</span>
+        </div>
+      </div>
+      <p class="impact-note">redu&ccedil;&atilde;o estimada de <strong>&gt;99%</strong> do esfor&ccedil;o manual</p>
+      <p class="impact-caption">Estimativa baseada no tempo necess&aacute;rio para executar o processo manualmente, comparado ao tempo real de execu&ccedil;&atilde;o do pipeline (ver "RESUMO DA EXECUCAO" em <code>etl_pipeline.py</code>).</p>
+    </div>
+
+    <div class="kpi-row" id="kpi-row" data-reveal>
       <div class="stat-tile skeleton"><span class="stat-label">% PJ Distintos</span><span class="stat-value">&nbsp;</span></div>
       <div class="stat-tile skeleton"><span class="stat-label">Inconsistencias</span><span class="stat-value">&nbsp;</span></div>
       <div class="stat-tile skeleton"><span class="stat-label">% Respondentes da pesquisa</span><span class="stat-value">&nbsp;</span></div>
@@ -53,185 +89,240 @@
     </div>
   </section>
 
-  <section class="grid-2">
-    <div class="card">
-      <div class="card-head">
-        <h2>PJ Distintos por vertical</h2>
-        <p class="card-sub">Clientes que cumpriram a regra de conclusao, por vertical de negocio</p>
-      </div>
-      <div id="chart-vertical" class="bar-chart" role="img" aria-label="Grafico de barras: PJ Distintos por vertical"></div>
-      <button class="table-toggle" data-target="table-vertical">Ver como tabela</button>
-      <div class="table-wrap" id="table-vertical" hidden></div>
-    </div>
+  <hr class="divider wrap">
 
-    <div class="card">
-      <div class="card-head">
-        <h2>Clientes por status</h2>
-        <p class="card-sub">Concluinte, participante ou sem atendimento lancado</p>
-      </div>
-      <div id="chart-status" class="stacked-bar" role="img" aria-label="Grafico: distribuicao de clientes por status"></div>
-      <ul class="legend" id="legend-status"></ul>
+  <!-- 03 — O PROBLEMA -->
+  <section class="wrap section-pad-sm" id="problema">
+    <div class="section-head" data-reveal>
+      <p class="eyebrow"><span class="index">03</span> O problema</p>
+      <h2 class="section-title">Uma regra de neg&oacute;cio, mil planilhas de dist&acirc;ncia.</h2>
+    </div>
+    <p class="section-sub" data-reveal style="max-width:70ch;font-size:var(--fs-body)">
+      Uma organiza&ccedil;&atilde;o com <strong style="color:var(--ink-0)">m&uacute;ltiplos gestores de carteira</strong> precisa saber,
+      a cada atualiza&ccedil;&atilde;o da base de atendimentos, quais clientes j&aacute; cumpriram a regra de neg&oacute;cio de
+      "conclus&atilde;o" &mdash; e quais teriam cumprido, se n&atilde;o fosse um lan&ccedil;amento inv&aacute;lido por erro de
+      digita&ccedil;&atilde;o ou integra&ccedil;&atilde;o. Esta &eacute; a mesma l&oacute;gica resolvida com <strong style="color:var(--ink-0)">SQL + Python</strong>
+      em vez de f&oacute;rmulas de planilha, com um <strong style="color:var(--ink-0)">CLI para os gestores</strong> incluirem/editarem
+      clientes com permiss&atilde;o por vertical, e um <strong style="color:var(--ink-0)">relat&oacute;rio Power BI</strong> para a visualiza&ccedil;&atilde;o final.
+    </p>
+  </section>
+
+  <!-- 04 — ARQUITETURA -->
+  <section class="wrap section-pad-sm" id="arquitetura">
+    <div class="section-head" data-reveal>
+      <p class="eyebrow"><span class="index">04</span> Arquitetura</p>
+      <h2 class="section-title">Seis camadas, uma decis&atilde;o.</h2>
+    </div>
+    <div class="arch-flow" data-reveal>
+      <span class="arch-step">Base</span><span class="arch-sep">&rarr;</span>
+      <span class="arch-step">Regras de neg&oacute;cio</span><span class="arch-sep">&rarr;</span>
+      <span class="arch-step">Tratamento / Classifica&ccedil;&atilde;o</span><span class="arch-sep">&rarr;</span>
+      <span class="arch-step">Indicadores</span><span class="arch-sep">&rarr;</span>
+      <span class="arch-step">Dashboard</span><span class="arch-sep">&rarr;</span>
+      <span class="arch-step">Decis&atilde;o</span>
     </div>
   </section>
 
-  <section class="card">
-    <div class="card-head">
-      <h2>Base de clientes</h2>
-      <p class="card-sub">Os 2500 clientes sinteticos do dataset -- busca, filtro e paginacao (somente leitura)</p>
-    </div>
-    <div class="filters-row">
-      <input type="search" id="clientes-busca" placeholder="Buscar por razao social ou CNPJ..." class="input-search">
-      <select id="clientes-filtro-vertical" class="input-select"><option value="">Todas as verticais</option></select>
-      <select id="clientes-filtro-gestor" class="input-select"><option value="">Todos os gestores</option></select>
-      <select id="clientes-filtro-status" class="input-select">
-        <option value="">Todos os status</option>
-        <option value="Concluinte">Concluinte</option>
-        <option value="Participante">Participante</option>
-        <option value="Sem atendimento">Sem atendimento</option>
-      </select>
-    </div>
-    <div class="table-wrap">
-      <table class="data-table" id="table-clientes">
-        <thead>
-          <tr>
-            <th>Cliente</th>
-            <th>CNPJ</th>
-            <th>Porte</th>
-            <th>Municipio</th>
-            <th>Gestor</th>
-            <th>Vertical</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <div class="pager" id="clientes-pager"></div>
-  </section>
+  <hr class="divider wrap">
 
-  <section class="card demo-card" id="demo-inclusao">
-    <div class="card-head">
-      <h2>Simular inclusao de cliente (ao vivo)</h2>
-      <p class="card-sub">
-        Sandbox publico separado do dataset acima -- banco real (Supabase/Postgres),
-        alimentado por quem testar aqui. Escolha um gestor, inclua um cliente,
-        e tente editar o cliente de um colega de vertical (permitido) ou de
-        outra vertical (bloqueado pela mesma regra de <code>permissoes.py</code>).
-      </p>
+  <!-- 05 — DASHBOARD -->
+  <section class="wrap section-pad" id="dashboard">
+    <div class="section-head" data-reveal>
+      <p class="eyebrow"><span class="index">05</span> Dashboard</p>
+      <h2 class="section-title">PJ Distintos e status, por vertical.</h2>
     </div>
 
-    <div class="demo-grid">
-      <form id="demo-form" class="demo-form">
-        <label>Voce e
-          <select id="demo-gestor-atual" required></select>
-        </label>
-        <label>Razao social
-          <input type="text" id="demo-razao-social" maxlength="80" required placeholder="Ex: Comercial Exemplo Ltda">
-        </label>
-        <label>CNPJ
-          <input type="text" id="demo-cnpj" maxlength="20" required placeholder="00000000000100">
-        </label>
-        <label>Porte
-          <select id="demo-porte" required>
-            <option value="MEI">MEI</option>
-            <option value="ME">ME</option>
-            <option value="EPP">EPP</option>
-            <option value="MEDIA">MEDIA</option>
-            <option value="GRANDE">GRANDE</option>
-          </select>
-        </label>
-        <button type="submit" class="btn-primary">Incluir cliente</button>
-        <p class="demo-feedback" id="demo-feedback" hidden></p>
-      </form>
-
-      <div class="demo-list">
-        <h3>Clientes incluidos no sandbox</h3>
-        <div class="table-wrap">
-          <table class="data-table" id="table-demo-clientes">
-            <thead>
-              <tr><th>Cliente</th><th>Porte</th><th>Gestor</th><th>Vertical</th><th></th></tr>
-            </thead>
-            <tbody></tbody>
-          </table>
+    <div class="grid-2">
+      <div class="card lift" data-reveal>
+        <div class="card-head">
+          <h3>PJ Distintos por vertical</h3>
+          <p class="card-sub">Clientes que cumpriram a regra de conclus&atilde;o, por vertical de neg&oacute;cio</p>
         </div>
-        <p class="empty-state" id="demo-clientes-empty" hidden>Ninguem incluiu um cliente ainda -- seja o primeiro, usando o formulario ao lado.</p>
+        <div id="chart-vertical" class="bar-chart" role="img" aria-label="Grafico de barras: PJ Distintos por vertical"></div>
+        <button class="table-toggle" data-target="table-vertical">Ver como tabela</button>
+        <div class="table-wrap" id="table-vertical" hidden></div>
+      </div>
+
+      <div class="card lift" data-reveal data-reveal-delay="1">
+        <div class="card-head">
+          <h3>Clientes por status</h3>
+          <p class="card-sub">Concluinte, participante ou sem atendimento lan&ccedil;ado</p>
+        </div>
+        <div id="chart-status" class="stacked-bar" role="img" aria-label="Grafico: distribuicao de clientes por status"></div>
+        <ul class="legend" id="legend-status"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 06 — DATASET -->
+  <section class="wrap section-pad" id="dataset">
+    <div class="card lift" data-reveal>
+      <div class="card-head">
+        <p class="eyebrow"><span class="index">06</span> Dataset</p>
+        <h3>Base de clientes</h3>
+        <p class="card-sub">Os 2500 clientes sint&eacute;ticos do dataset &mdash; busca, filtro e pagina&ccedil;&atilde;o (somente leitura)</p>
+      </div>
+      <div class="filters-row">
+        <input type="search" id="clientes-busca" placeholder="Buscar por razao social ou CNPJ..." class="input-search">
+        <select id="clientes-filtro-vertical" class="input-select"><option value="">Todas as verticais</option></select>
+        <select id="clientes-filtro-gestor" class="input-select"><option value="">Todos os gestores</option></select>
+        <select id="clientes-filtro-status" class="input-select">
+          <option value="">Todos os status</option>
+          <option value="Concluinte">Concluinte</option>
+          <option value="Participante">Participante</option>
+          <option value="Sem atendimento">Sem atendimento</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table" id="table-clientes">
+          <thead>
+            <tr>
+              <th>Cliente</th><th>CNPJ</th><th>Porte</th><th>Municipio</th>
+              <th>Gestor</th><th>Vertical</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="pager" id="clientes-pager"></div>
+    </div>
+  </section>
+
+  <!-- 07 — SANDBOX -->
+  <section class="wrap section-pad" id="demo-inclusao">
+    <div class="card demo-card" data-reveal>
+      <div class="card-head">
+        <p class="eyebrow"><span class="index">07</span> Sandbox</p>
+        <span class="demo-badge"><span class="dot"></span> Interactive demo &middot; banco real</span>
+        <h3>Simular inclus&atilde;o de cliente, ao vivo</h3>
+        <p class="card-sub">
+          Sandbox p&uacute;blico separado do dataset acima &mdash; banco Postgres real (Supabase),
+          alimentado por quem testar aqui. Escolha um gestor, inclua um cliente, e tente editar o
+          cliente de um colega de vertical (permitido) ou de outra vertical (bloqueado pela mesma
+          regra de <code>permissoes.py</code>).
+        </p>
+      </div>
+
+      <div class="demo-grid">
+        <form id="demo-form" class="demo-form">
+          <label>Voc&ecirc; &eacute;
+            <select id="demo-gestor-atual" required></select>
+          </label>
+          <label>Raz&atilde;o social
+            <input type="text" id="demo-razao-social" maxlength="80" required placeholder="Ex: Comercial Exemplo Ltda">
+          </label>
+          <label>CNPJ
+            <input type="text" id="demo-cnpj" maxlength="20" required placeholder="00000000000100">
+          </label>
+          <label>Porte
+            <select id="demo-porte" required>
+              <option value="MEI">MEI</option>
+              <option value="ME">ME</option>
+              <option value="EPP">EPP</option>
+              <option value="MEDIA">MEDIA</option>
+              <option value="GRANDE">GRANDE</option>
+            </select>
+          </label>
+          <button type="submit" class="btn btn-primary btn-block">Incluir cliente</button>
+        </form>
+
+        <div class="demo-list">
+          <h4>Clientes inclu&iacute;dos no sandbox</h4>
+          <div class="table-wrap">
+            <table class="data-table" id="table-demo-clientes">
+              <thead>
+                <tr><th>Cliente</th><th>Porte</th><th>Gestor</th><th>Vertical</th><th></th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <p class="empty-state" id="demo-clientes-empty" hidden>Ningu&eacute;m incluiu um cliente ainda &mdash; seja o primeiro, usando o formul&aacute;rio ao lado.</p>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <h4>Log de altera&ccedil;&otilde;es do sandbox</h4>
+        <table class="data-table" id="table-demo-log">
+          <thead>
+            <tr><th>Quando</th><th>Opera&ccedil;&atilde;o</th><th>Campo</th><th>Antigo &rarr; Novo</th><th>Gestor</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p class="empty-state" id="demo-log-empty" hidden>Nenhuma altera&ccedil;&atilde;o no sandbox ainda.</p>
       </div>
     </div>
 
-    <div class="table-wrap">
-      <h3>Log de alteracoes do sandbox</h3>
-      <table class="data-table" id="table-demo-log">
-        <thead>
-          <tr><th>Quando</th><th>Operacao</th><th>Campo</th><th>Antigo &rarr; Novo</th><th>Gestor</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <p class="empty-state" id="demo-log-empty" hidden>Nenhuma alteracao no sandbox ainda.</p>
+    <p class="demo-feedback" id="demo-feedback" hidden></p>
+  </section>
+
+  <!-- ranking de gestores -->
+  <section class="wrap section-pad">
+    <div class="card lift" data-reveal>
+      <div class="card-head">
+        <h3>Ranking de gestores</h3>
+        <p class="card-sub">Carteira, PJ Distintos e inconsist&ecirc;ncias por gestor</p>
+      </div>
+      <div class="podium" id="podium-gestores"></div>
+      <div class="table-wrap">
+        <table class="data-table" id="table-gestores">
+          <thead>
+            <tr>
+              <th>Gestor</th><th>Vertical</th><th class="num">Clientes</th>
+              <th class="num">PJ Distintos</th><th></th>
+              <th class="num">Inconsistencias</th><th class="num">% Respondentes</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
   </section>
 
-  <section class="card">
-    <div class="card-head">
-      <h2>Ranking de gestores</h2>
-      <p class="card-sub">Carteira, PJ Distintos e inconsistencias por gestor (ordenado por PJ Distintos)</p>
-    </div>
-    <div class="table-wrap">
-      <table class="data-table" id="table-gestores">
-        <thead>
-          <tr>
-            <th>Gestor</th>
-            <th>Vertical</th>
-            <th class="num">Clientes</th>
-            <th class="num">PJ Distintos</th>
-            <th></th>
-            <th class="num">Inconsistencias</th>
-            <th class="num">% Respondentes</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+  <!-- 08 — AUDITORIA -->
+  <section class="wrap section-pad" id="auditoria">
+    <div class="card lift" data-reveal>
+      <div class="card-head">
+        <p class="eyebrow"><span class="index">08</span> Auditoria</p>
+        <h3>Trilha de altera&ccedil;&otilde;es</h3>
+        <p class="card-sub">&Uacute;ltimas inclus&otilde;es/edi&ccedil;&otilde;es/exclus&otilde;es feitas pelos gestores via CLI (<code>log_alteracoes</code>)</p>
+      </div>
+      <div class="timeline" id="table-log"></div>
+      <p class="empty-state" id="log-empty" hidden>Nenhuma altera&ccedil;&atilde;o registrada ainda neste ambiente &mdash; toda inclus&atilde;o/edi&ccedil;&atilde;o/exclus&atilde;o feita via <code>adicionar_cliente.py</code> aparece aqui.</p>
     </div>
   </section>
 
-  <section class="card">
-    <div class="card-head">
-      <h2>Auditoria recente</h2>
-      <p class="card-sub">Ultimas inclusoes/edicoes/exclusoes feitas pelos gestores via CLI (log_alteracoes)</p>
+  <!-- 09 — STACK -->
+  <section class="wrap section-pad-sm" id="stack">
+    <div class="section-head" data-reveal>
+      <p class="eyebrow"><span class="index">09</span> Stack</p>
+      <h2 class="section-title">Uma ferramenta, seis tecnologias.</h2>
     </div>
-    <div class="table-wrap">
-      <table class="data-table" id="table-log">
-        <thead>
-          <tr>
-            <th>Quando</th>
-            <th>Operacao</th>
-            <th>Tabela</th>
-            <th>Registro</th>
-            <th>Campo</th>
-            <th>Antigo &rarr; Novo</th>
-            <th>Gestor</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <p class="empty-state" id="log-empty" hidden>Nenhuma alteracao registrada ainda neste ambiente &mdash; toda inclusao/edicao/exclusao feita via <code>adicionar_cliente.py</code> aparece aqui.</p>
+    <div class="stack-grid" data-reveal>
+      <div class="stack-item"><div class="name">Python</div><div class="role">pipeline / CLI</div></div>
+      <div class="stack-item"><div class="name">SQL</div><div class="role">views / regra de neg&oacute;cio</div></div>
+      <div class="stack-item"><div class="name">Supabase</div><div class="role">Postgres / RLS</div></div>
+      <div class="stack-item"><div class="name">Power BI</div><div class="role">DAX / dashboard</div></div>
+      <div class="stack-item"><div class="name">JavaScript</div><div class="role">site / animações</div></div>
+      <div class="stack-item"><div class="name">Vercel</div><div class="role">deploy cont&iacute;nuo</div></div>
     </div>
   </section>
 
-  <section class="card powerbi-card" id="powerbi">
-    <div class="card-head">
-      <h2>Relatorio completo no Power BI</h2>
-      <p class="card-sub">Drill-down por cliente, filtros interativos e o modelo de dados completo (ver <code>powerbi/modelo_de_dados_e_dax.md</code> no repositorio)</p>
+  <!-- 10 — POWER BI -->
+  <section class="wrap section-pad" id="powerbi">
+    <div class="card powerbi-card" data-reveal>
+      <div class="powerbi-icon">&#128202;</div>
+      <span class="powerbi-badge"><span class="index">10</span> Power BI</span>
+      <div id="powerbi-embed"></div>
     </div>
-    <div id="powerbi-embed"></div>
   </section>
 
 </main>
 
+<!-- 11 — GITHUB / RODAPE -->
 <footer class="site-footer">
-  <div class="wrap">
-    <p>Python (stdlib) + SQL (views) + Pandas/Matplotlib + Power BI (DAX) + pytest.
-      <a href="https://github.com/ProjectForm/JornadaCliente" target="_blank" rel="noopener">Codigo-fonte no GitHub</a>.
-    </p>
+  <div class="wrap footer-row">
+    <p>Python &middot; SQL &middot; Supabase &middot; Power BI &middot; Vercel</p>
+    <p><a href="https://github.com/ProjectForm/JornadaCliente" target="_blank" rel="noopener">C&oacute;digo-fonte no GitHub &rarr;</a></p>
   </div>
 </footer>
 
