@@ -53,6 +53,32 @@
       <p class="section-sub">Os mesmos n&uacute;meros que hoje exigiriam cruzar planilhas manualmente.</p>
     </div>
 
+    <div class="filter-bar" id="filter-bar" data-state="loading" data-reveal>
+      <div class="filter-bar-head">
+        <span class="filter-bar-title">Filtros do dashboard</span>
+        <span class="filter-result-count" id="filter-result-count">Carregando dados...</span>
+        <button type="button" class="filter-clear" id="filter-clear" hidden>Limpar filtros</button>
+      </div>
+      <div class="filter-groups">
+        <div class="filter-group">
+          <span class="filter-group-label">Vertical</span>
+          <div class="chip-row" id="chips-vertical"><span class="chip-skeleton"></span><span class="chip-skeleton"></span><span class="chip-skeleton"></span></div>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group-label">Status</span>
+          <div class="chip-row" id="chips-status"><span class="chip-skeleton"></span><span class="chip-skeleton"></span></div>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group-label">Porte</span>
+          <div class="chip-row" id="chips-porte"><span class="chip-skeleton"></span><span class="chip-skeleton"></span></div>
+        </div>
+        <div class="filter-group filter-group-gestor">
+          <span class="filter-group-label">Gestor</span>
+          <select class="input-select" id="filter-gestor" disabled><option value="">Todos os gestores</option></select>
+        </div>
+      </div>
+    </div>
+
     <div class="kpi-hero-row" data-reveal>
       <div class="card kpi-primary">
         <span class="stat-label">Total de clientes na carteira</span>
@@ -130,13 +156,14 @@
     <div class="section-head" data-reveal>
       <p class="eyebrow"><span class="index">05</span> Dashboard</p>
       <h2 class="section-title">PJ Distintos e status, por vertical.</h2>
+      <span class="filtro-indicator" hidden>&middot; <span class="filtro-indicator-text"></span> <button type="button" class="filtro-indicator-clear" data-clear-filtros>Limpar</button></span>
     </div>
 
     <div class="grid-2">
       <div class="card lift" data-reveal>
         <div class="card-head">
           <h3>PJ Distintos por vertical</h3>
-          <p class="card-sub">Clientes que cumpriram a regra de conclus&atilde;o, por vertical de neg&oacute;cio</p>
+          <p class="card-sub">Clientes que cumpriram a regra de conclus&atilde;o, por vertical de neg&oacute;cio &mdash; clique numa barra para filtrar</p>
         </div>
         <div id="chart-vertical" class="bar-chart" role="img" aria-label="Grafico de barras: PJ Distintos por vertical"></div>
         <button class="table-toggle" data-target="table-vertical">Ver como tabela</button>
@@ -152,26 +179,28 @@
         <ul class="legend" id="legend-status"></ul>
       </div>
     </div>
+
+    <div class="card lift" data-reveal style="margin-top:20px">
+      <div class="card-head">
+        <h3>Aumento m&eacute;dio de faturamento por porte</h3>
+        <p class="card-sub">Entre clientes respondentes da pesquisa &mdash; indica qual segmento mais se beneficia do programa</p>
+      </div>
+      <div id="chart-faturamento" class="bar-chart" role="img" aria-label="Grafico de barras: aumento medio de faturamento por porte"></div>
+    </div>
   </section>
 
   <!-- 06 — DATASET -->
   <section class="wrap section-pad" id="dataset">
     <div class="card lift" data-reveal>
       <div class="card-head">
-        <p class="eyebrow"><span class="index">06</span> Dataset</p>
+        <p class="eyebrow"><span class="index">06</span> Dataset
+          <span class="filtro-indicator" hidden>&middot; <span class="filtro-indicator-text"></span> <button type="button" class="filtro-indicator-clear" data-clear-filtros>Limpar</button></span>
+        </p>
         <h3>Base de clientes</h3>
-        <p class="card-sub">Os 2500 clientes sint&eacute;ticos do dataset &mdash; busca, filtro e pagina&ccedil;&atilde;o (somente leitura)</p>
+        <p class="card-sub">Os 2500 clientes sint&eacute;ticos do dataset &mdash; usa os filtros do dashboard acima, mais busca e pagina&ccedil;&atilde;o aqui (somente leitura, clique numa linha para ver o detalhe)</p>
       </div>
       <div class="filters-row">
         <input type="search" id="clientes-busca" placeholder="Buscar por razao social ou CNPJ..." class="input-search">
-        <select id="clientes-filtro-vertical" class="input-select"><option value="">Todas as verticais</option></select>
-        <select id="clientes-filtro-gestor" class="input-select"><option value="">Todos os gestores</option></select>
-        <select id="clientes-filtro-status" class="input-select">
-          <option value="">Todos os status</option>
-          <option value="Concluinte">Concluinte</option>
-          <option value="Participante">Participante</option>
-          <option value="Sem atendimento">Sem atendimento</option>
-        </select>
       </div>
       <div class="table-wrap">
         <table class="data-table" id="table-clientes">
@@ -330,12 +359,26 @@
 
   <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
 
+  <!-- Painel de detalhe do cliente (drill-down da base de clientes) -->
+  <div class="panel-overlay" id="panel-overlay" hidden>
+    <div class="panel-dialog" id="panel-cliente" role="dialog" aria-modal="true" aria-labelledby="panel-cliente-title">
+      <button type="button" class="panel-close" id="panel-close" aria-label="Fechar detalhes do cliente">&times;</button>
+      <p class="eyebrow">Detalhe do cliente</p>
+      <h3 id="panel-cliente-title"></h3>
+      <p class="panel-cnpj" id="panel-cliente-cnpj"></p>
+      <div class="panel-badges" id="panel-cliente-badges"></div>
+      <dl class="panel-fields" id="panel-cliente-fields"></dl>
+    </div>
+  </div>
+
   <!-- ranking de gestores -->
   <section class="wrap section-pad">
     <div class="card lift" data-reveal>
       <div class="card-head">
-        <h3>Ranking de gestores</h3>
-        <p class="card-sub">Carteira, PJ Distintos e inconsist&ecirc;ncias por gestor</p>
+        <h3>Ranking de gestores
+          <span class="filtro-indicator" hidden>&middot; <span class="filtro-indicator-text"></span> <button type="button" class="filtro-indicator-clear" data-clear-filtros>Limpar</button></span>
+        </h3>
+        <p class="card-sub">Carteira, PJ Distintos e inconsist&ecirc;ncias por gestor &mdash; clique num gestor para ver s&oacute; a carteira dele</p>
       </div>
       <div class="podium" id="podium-gestores"></div>
       <div class="table-wrap">
@@ -388,6 +431,7 @@
       <div class="powerbi-icon">&#128202;</div>
       <span class="powerbi-badge"><span class="index">10</span> Power BI</span>
       <div id="powerbi-embed"></div>
+      <ul class="powerbi-model-tags" id="powerbi-model-tags"></ul>
     </div>
   </section>
 

@@ -322,6 +322,10 @@ hr.divider { border: none; border-top: 1px solid var(--hairline); margin: 0; }
   transition: width 1.1s var(--ease);
 }
 .bar-row .bar-value { font-size: 13.5px; color: var(--ink-0); font-variant-numeric: tabular-nums; font-weight: 600; }
+.bar-row[data-vertical] { cursor: pointer; border-radius: var(--r-sm); padding: 4px 6px; margin: -4px -6px; transition: background .2s var(--ease); }
+.bar-row[data-vertical]:hover, .bar-row[data-vertical]:focus-visible { background: rgba(255,255,255,.05); outline: none; }
+.bar-row[data-vertical].is-active { background: rgba(255,255,255,.09); }
+.bar-row[data-vertical].is-active .bar-label { color: var(--ink-0); font-weight: 650; }
 
 /* Stacked status bar */
 .stacked-bar { margin-top: 8px; }
@@ -378,6 +382,60 @@ table.data-table .mini-bar-cell { min-width: 90px; }
 .pager button:disabled { opacity: .35; cursor: default; }
 
 /* ============================================================================
+   FILTER BAR (filtros globais do dashboard — Fase 3)
+   ========================================================================== */
+.filter-bar {
+  background: var(--bg-1); border: 1px solid var(--hairline); border-radius: var(--r-md);
+  padding: 18px 22px; margin-bottom: 24px; transition: opacity .3s var(--ease);
+}
+.filter-bar[data-state="loading"] { opacity: .6; pointer-events: none; }
+.filter-bar[data-state="error"] { border-color: rgba(248,113,113,.35); }
+.filter-bar-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+.filter-bar-title { font-size: 13px; font-weight: 650; color: var(--ink-0); text-transform: uppercase; letter-spacing: .05em; }
+.filter-result-count { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.filter-clear {
+  margin-left: auto; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ink-1);
+  background: rgba(255,255,255,.06); border: 1px solid var(--hairline-strong); border-radius: var(--r-pill);
+  padding: 6px 14px; cursor: pointer; transition: background .2s var(--ease), color .2s var(--ease);
+}
+.filter-clear:hover { background: rgba(255,255,255,.1); color: var(--ink-0); }
+
+.filter-groups { display: flex; flex-wrap: wrap; gap: 20px 28px; align-items: flex-start; }
+.filter-group { display: flex; flex-direction: column; gap: 8px; }
+.filter-group-label { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.filter-group-gestor { min-width: 220px; }
+.filter-group-gestor .input-select { width: 100%; flex: none; }
+
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; max-width: 460px; }
+.chip {
+  font: inherit; font-size: 12.5px; font-weight: 500; padding: 7px 14px; border-radius: var(--r-pill);
+  border: 1px solid var(--hairline-strong); background: transparent; color: var(--ink-1); cursor: pointer;
+  transition: background .2s var(--ease), color .2s var(--ease), border-color .2s var(--ease);
+}
+.chip:hover { border-color: rgba(255,255,255,.3); color: var(--ink-0); }
+.chip.is-active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 650; }
+.chip-skeleton {
+  display: inline-block; width: 74px; height: 30px; border-radius: var(--r-pill);
+  background: linear-gradient(90deg, var(--bg-2), var(--bg-3), var(--bg-2));
+  background-size: 200% 100%; animation: chip-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes chip-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+.filtro-indicator { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--ink-1); margin-left: 8px; vertical-align: middle; }
+.filtro-indicator-clear {
+  font: inherit; font-size: 11.5px; font-weight: 600; color: var(--ink-2); background: none;
+  border: none; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; padding: 0;
+}
+.filtro-indicator-clear:hover { color: var(--ink-0); }
+
+@media (max-width: 700px) {
+  .filter-bar { padding: 16px 16px; }
+  .filter-groups { gap: 16px 20px; }
+  .chip-row { max-width: none; }
+  .filter-group-gestor { min-width: 0; width: 100%; }
+}
+
+/* ============================================================================
    TOP 3 GESTORES
    ========================================================================== */
 .podium { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
@@ -396,6 +454,14 @@ table.data-table .mini-bar-cell { min-width: 90px; }
 .podium-vertical { font-size: 12.5px; color: var(--ink-2); margin: 0 0 16px; }
 .podium-value { font-size: 30px; font-weight: 750; letter-spacing: -0.02em; color: var(--ink-0); font-variant-numeric: tabular-nums; }
 .podium-value-label { font-size: 11.5px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; }
+.podium-card[data-gestor] { cursor: pointer; transition: border-color .2s var(--ease), box-shadow .2s var(--ease); }
+.podium-card[data-gestor]:hover, .podium-card[data-gestor]:focus-visible { border-color: rgba(255,255,255,.32); outline: none; }
+.podium-card[data-gestor].is-active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+#table-gestores tbody tr[data-gestor] { cursor: pointer; }
+#table-gestores tbody tr[data-gestor].is-active { background: rgba(255,255,255,.07); }
+#table-gestores tbody tr[data-gestor].is-active td { color: var(--ink-0); }
+#table-clientes tbody tr[data-cliente-id] { cursor: pointer; }
+#table-clientes tbody tr[data-cliente-id]:focus-visible { outline: 2px solid rgba(255,255,255,.4); outline-offset: -2px; }
 
 /* ============================================================================
    SANDBOX (demo ao vivo) — inputs/CTA premium; nenhuma logica de permissao
@@ -601,6 +667,51 @@ tr.is-new { animation: row-in .6s var(--ease); }
 .powerbi-placeholder-text { color: var(--ink-2); font-size: 14.5px; max-width: 48ch; margin: 0 auto 22px; line-height: 1.6; }
 .powerbi-placeholder a.btn { margin: 0 auto; }
 #powerbi-embed iframe { width: 100%; height: 620px; border: 1px solid var(--hairline); border-radius: var(--r-md); }
+.powerbi-model-tags {
+  list-style: none; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+  padding: 0; margin: 24px auto 0; max-width: 480px;
+}
+.powerbi-model-tags li {
+  font-size: 12px; font-weight: 600; color: var(--ink-2); background: rgba(255,255,255,.05);
+  border: 1px solid var(--hairline); border-radius: var(--r-pill); padding: 5px 12px;
+}
+
+/* ============================================================================
+   PAINEL DE DETALHE DO CLIENTE (drill-down da base — independente do sandbox)
+   ========================================================================== */
+.panel-overlay {
+  position: fixed; inset: 0; z-index: 210; display: flex; justify-content: flex-end;
+  background: rgba(4,4,5,.6); backdrop-filter: blur(2px);
+  opacity: 0; pointer-events: none; transition: opacity .3s var(--ease);
+}
+.panel-overlay.is-open { opacity: 1; pointer-events: auto; }
+.panel-dialog {
+  width: 100%; max-width: 440px; height: 100%; overflow-y: auto;
+  background: linear-gradient(180deg, var(--bg-3), var(--bg-1)); border-left: 1px solid var(--hairline-strong);
+  box-shadow: var(--shadow-lg); padding: 34px 30px; position: relative;
+  transform: translateX(100%); transition: transform .35s var(--ease);
+}
+.panel-overlay.is-open .panel-dialog { transform: translateX(0); }
+.panel-close {
+  position: absolute; top: 22px; right: 22px; width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(255,255,255,.06); border: 1px solid var(--hairline-strong); color: var(--ink-1);
+  font-size: 18px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background .2s var(--ease), color .2s var(--ease);
+}
+.panel-close:hover { background: rgba(255,255,255,.12); color: var(--ink-0); }
+#panel-cliente-title { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink-0); margin: 0 0 4px; max-width: 85%; }
+.panel-cnpj { font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; margin: 0 0 18px; }
+.panel-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 26px; }
+.badge-status-concluinte { color: var(--good); background: var(--good-soft); }
+.badge-status-participante { color: var(--ink-1); background: rgba(255,255,255,.08); }
+.badge-status-sem-atendimento { color: var(--warn); background: var(--warn-soft); }
+.panel-fields { display: flex; flex-direction: column; margin: 0; }
+.panel-field { display: flex; justify-content: space-between; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--hairline); }
+.panel-field:last-child { border-bottom: none; }
+.panel-field dt { font-size: 12.5px; color: var(--ink-2); margin: 0; }
+.panel-field dd { font-size: 13.5px; color: var(--ink-0); font-weight: 550; margin: 0; text-align: right; }
+
+@media (max-width: 700px) { .panel-dialog { max-width: 100%; } }
 
 /* ============================================================================
    STACK

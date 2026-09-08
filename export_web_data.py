@@ -61,6 +61,7 @@ def gerar_resumo(dados_cliente):
 CAMPOS_CLIENTE_WEB = (
     "cliente_id", "razao_social", "cnpj", "porte", "municipio",
     "gestor", "vertical", "status", "pj_distinto_oficial",
+    "qtd_planos_inconsistentes", "respondeu", "aumento_faturamento_pct",
 )
 
 
