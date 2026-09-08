@@ -223,7 +223,7 @@
       <div class="card-head">
         <p class="eyebrow"><span class="index">07</span> Sandbox</p>
         <div class="demo-title-row">
-          <h3>Interactive Sandbox &mdash; simule opera&ccedil;&otilde;es de carteira</h3>
+          <h3>Interactive Sandbox &mdash; mini-BI ao vivo</h3>
           <span class="conn-status" id="conn-status" data-state="connecting">
             <span class="conn-dot"></span>
             <span class="conn-text">Conectando...</span>
@@ -231,14 +231,35 @@
         </div>
         <p class="card-sub">
           Banco Postgres real (Supabase), separado do dataset de 2.500 clientes acima. As regras de
-          permiss&atilde;o por vertical (mesma l&oacute;gica de <code>permissoes.py</code>) s&atilde;o
-          verificadas pelo banco, n&atilde;o pelo navegador.
+          permiss&atilde;o por vertical (mesma l&oacute;gica de <code>permissoes.py</code>) e a regra de
+          conclus&atilde;o (mesma de <code>sql/queries.sql</code>) s&atilde;o calculadas no banco, nunca no navegador.
+          Qualquer inclus&atilde;o/edi&ccedil;&atilde;o/exclus&atilde;o atualiza tudo abaixo automaticamente.
         </p>
+        <div class="sync-row">
+          <span class="sync-status" id="sandbox-sync-status" data-state="idle">
+            <span class="sync-dot"></span><span class="sync-text">&mdash;</span>
+          </span>
+          <span class="sync-last" id="sandbox-last-sync"></span>
+        </div>
       </div>
 
       <div class="conn-banner" id="conn-banner" hidden>
         <span>N&atilde;o foi poss&iacute;vel conectar ao sandbox agora.</span>
         <button type="button" class="btn btn-ghost btn-sm" id="conn-retry">Tentar novamente</button>
+      </div>
+
+      <div class="sandbox-kpi-row" id="sandbox-kpi-row">
+        <div class="stat-tile sandbox-kpi skeleton" data-kpi="total"><span class="stat-label">Total de clientes<button type="button" class="kpi-info" data-info="total" aria-label="Como este indicador e calculado" title="Total de clientes ativos no sandbox (excluidos nao contam).">i</button></span><span class="stat-value">&nbsp;</span></div>
+        <div class="stat-tile sandbox-kpi skeleton" data-kpi="pj_distinto"><span class="stat-label">PJ Distinto<button type="button" class="kpi-info" data-info="pj_distinto" aria-label="Como este indicador e calculado" title="Clientes concluintes (>=1 diagnostico + 2 assessorias validas, ou >=1 atendimento Sebraetec valido) em pelo menos um Centro de Custo.">i</button></span><span class="stat-value">&nbsp;</span></div>
+        <div class="stat-tile sandbox-kpi skeleton" data-kpi="inconsistente"><span class="stat-label">Inconsistentes<button type="button" class="kpi-info" data-info="inconsistente" aria-label="Como este indicador e calculado" title="Clientes que seriam concluintes se os atendimentos lancados fossem validos, mas nao sao -- indica erro/pendencia na fonte, tratado separado da conclusao.">i</button></span><span class="stat-value">&nbsp;</span></div>
+        <div class="stat-tile sandbox-kpi skeleton" data-kpi="prioritario"><span class="stat-label">Priorit&aacute;rios<button type="button" class="kpi-info" data-info="prioritario" aria-label="Como este indicador e calculado" title="Clientes marcados manualmente como prioritarios pelo gestor responsavel.">i</button></span><span class="stat-value">&nbsp;</span></div>
+        <div class="stat-tile sandbox-kpi skeleton" data-kpi="respondentes"><span class="stat-label">Respondentes<button type="button" class="kpi-info" data-info="respondentes" aria-label="Como este indicador e calculado" title="Clientes que responderam a pesquisa de acompanhamento.">i</button></span><span class="stat-value">&nbsp;</span></div>
+        <div class="stat-tile sandbox-kpi skeleton" data-kpi="aumento"><span class="stat-label">Aumento m&eacute;dio<button type="button" class="kpi-info" data-info="aumento" aria-label="Como este indicador e calculado" title="Media do percentual de aumento de faturamento, apenas entre quem respondeu a pesquisa.">i</button></span><span class="stat-value">&nbsp;</span></div>
+      </div>
+
+      <div class="drilldown-banner" id="sandbox-drilldown" hidden>
+        <span>Mostrando clientes que atendem: <strong id="sandbox-drilldown-label"></strong></span>
+        <button type="button" class="btn btn-ghost btn-sm" id="sandbox-drilldown-clear">Limpar</button>
       </div>
 
       <div class="demo-grid">
@@ -271,6 +292,21 @@
                 <option value="GRANDE">GRANDE</option>
               </select>
             </label>
+            <details class="demo-extra-fields">
+              <summary>Mais detalhes (opcional)</summary>
+              <label>Munic&iacute;pio
+                <input type="text" id="demo-municipio" maxlength="60" autocomplete="off">
+              </label>
+              <label class="demo-check"><input type="checkbox" id="demo-ali"> Indica&ccedil;&atilde;o de ALI</label>
+              <label class="demo-check"><input type="checkbox" id="demo-prioritario"> Cliente priorit&aacute;rio</label>
+              <label class="demo-check"><input type="checkbox" id="demo-respondeu"> Respondeu a pesquisa</label>
+              <label id="demo-aumento-wrap" hidden>% de aumento de faturamento informado
+                <input type="number" id="demo-aumento" min="-100" max="500" step="0.1">
+              </label>
+              <label>Observa&ccedil;&otilde;es
+                <textarea id="demo-observacoes" maxlength="300" rows="2"></textarea>
+              </label>
+            </details>
             <button type="submit" class="btn btn-primary btn-block" id="demo-submit" disabled>
               <span class="btn-spinner" hidden></span>
               <span class="btn-label">Incluir cliente</span>
@@ -279,11 +315,25 @@
         </div>
 
         <div class="demo-list">
-          <h4>Clientes do sandbox</h4>
+          <div class="demo-list-head">
+            <h4>Clientes do sandbox</h4>
+            <div class="ranking-criterio">
+              <label for="sandbox-ranking-criterio">Ranking por</label>
+              <select id="sandbox-ranking-criterio" class="input-select">
+                <option value="clientes">Mais clientes</option>
+                <option value="pj_distintos">Mais PJ Distintos</option>
+                <option value="pct_conclusao">Maior % de conclus&atilde;o</option>
+                <option value="respondentes">Mais respondentes</option>
+                <option value="aumento_medio">Maior aumento m&eacute;dio</option>
+                <option value="inconsistencias">Mais inconsist&ecirc;ncias</option>
+              </select>
+            </div>
+          </div>
+          <div class="sandbox-ranking" id="sandbox-ranking"></div>
           <div class="table-wrap">
             <table class="data-table" id="table-demo-clientes">
               <thead>
-                <tr><th>Cliente</th><th>Porte</th><th>Gestor</th><th>Vertical</th><th></th></tr>
+                <tr><th>Cliente</th><th>Porte</th><th>Gestor</th><th>Vertical</th><th>Status</th><th></th></tr>
               </thead>
               <tbody></tbody>
             </table>
@@ -295,7 +345,7 @@
       </div>
 
       <div class="table-wrap">
-        <h4>Auditoria do sandbox</h4>
+        <h4>Atividade recente do sandbox</h4>
         <div class="timeline" id="table-demo-log"></div>
         <p class="empty-state" id="demo-log-empty" hidden>Nenhuma altera&ccedil;&atilde;o no sandbox ainda.</p>
       </div>
@@ -320,6 +370,18 @@
             <option value="GRANDE">GRANDE</option>
           </select>
         </label>
+        <label>Munic&iacute;pio
+          <input type="text" id="editar-municipio" maxlength="60">
+        </label>
+        <label class="demo-check"><input type="checkbox" id="editar-ali"> Indica&ccedil;&atilde;o de ALI</label>
+        <label class="demo-check"><input type="checkbox" id="editar-prioritario"> Cliente priorit&aacute;rio</label>
+        <label class="demo-check"><input type="checkbox" id="editar-respondeu"> Respondeu a pesquisa</label>
+        <label id="editar-aumento-wrap" hidden>% de aumento de faturamento informado
+          <input type="number" id="editar-aumento" min="-100" max="500" step="0.1">
+        </label>
+        <label>Observa&ccedil;&otilde;es
+          <textarea id="editar-observacoes" maxlength="300" rows="2"></textarea>
+        </label>
         <div class="modal-readonly">
           <span>Gestor respons&aacute;vel: <strong id="editar-gestor-nome"></strong></span>
           <span>Vertical: <strong id="editar-gestor-vertical"></strong></span>
@@ -332,6 +394,24 @@
           </button>
         </div>
       </form>
+    </div>
+
+    <div class="modal-dialog modal-dialog-wide" id="modal-atendimento" role="dialog" aria-modal="true" aria-labelledby="modal-atendimento-title" hidden>
+      <h4 id="modal-atendimento-title">Atendimentos por Centro de Custo</h4>
+      <p class="modal-text" id="atendimento-cliente-nome"></p>
+      <p class="modal-text modal-text-muted">Defina diagn&oacute;sticos/assessorias (ou Sebraetec) v&aacute;lidos e totais lan&ccedil;ados em cada Centro de Custo &mdash; a mesma regra de <code>sql/queries.sql</code> roda no banco para decidir Concluinte/Inconsistente.</p>
+      <div id="atendimento-lista" class="atendimento-lista"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" data-modal-close>Fechar</button>
+      </div>
+    </div>
+
+    <div class="modal-dialog" id="modal-info" role="dialog" aria-modal="true" aria-labelledby="modal-info-title" hidden>
+      <h4 id="modal-info-title">Como este indicador &eacute; calculado</h4>
+      <p class="modal-text" id="modal-info-texto"></p>
+      <div class="modal-actions modal-actions-center">
+        <button type="button" class="btn btn-primary" data-modal-close>Entendi</button>
+      </div>
     </div>
 
     <div class="modal-dialog" id="modal-excluir" role="dialog" aria-modal="true" aria-labelledby="modal-excluir-title" hidden>
