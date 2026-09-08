@@ -193,41 +193,64 @@
     <div class="card demo-card" data-reveal>
       <div class="card-head">
         <p class="eyebrow"><span class="index">07</span> Sandbox</p>
-        <span class="demo-badge"><span class="dot"></span> Interactive demo &middot; banco real</span>
-        <h3>Simular inclus&atilde;o de cliente, ao vivo</h3>
+        <div class="demo-title-row">
+          <h3>Interactive Sandbox &mdash; simule opera&ccedil;&otilde;es de carteira</h3>
+          <span class="conn-status" id="conn-status" data-state="connecting">
+            <span class="conn-dot"></span>
+            <span class="conn-text">Conectando...</span>
+          </span>
+        </div>
         <p class="card-sub">
-          Sandbox p&uacute;blico separado do dataset acima &mdash; banco Postgres real (Supabase),
-          alimentado por quem testar aqui. Escolha um gestor, inclua um cliente, e tente editar o
-          cliente de um colega de vertical (permitido) ou de outra vertical (bloqueado pela mesma
-          regra de <code>permissoes.py</code>).
+          Banco Postgres real (Supabase), separado do dataset de 2.500 clientes acima. As regras de
+          permiss&atilde;o por vertical (mesma l&oacute;gica de <code>permissoes.py</code>) s&atilde;o
+          verificadas pelo banco, n&atilde;o pelo navegador.
         </p>
       </div>
 
+      <div class="conn-banner" id="conn-banner" hidden>
+        <span>N&atilde;o foi poss&iacute;vel conectar ao sandbox agora.</span>
+        <button type="button" class="btn btn-ghost btn-sm" id="conn-retry">Tentar novamente</button>
+      </div>
+
       <div class="demo-grid">
-        <form id="demo-form" class="demo-form">
-          <label>Voc&ecirc; &eacute;
-            <select id="demo-gestor-atual" required></select>
-          </label>
-          <label>Raz&atilde;o social
-            <input type="text" id="demo-razao-social" maxlength="80" required placeholder="Ex: Comercial Exemplo Ltda">
-          </label>
-          <label>CNPJ
-            <input type="text" id="demo-cnpj" maxlength="20" required placeholder="00000000000100">
-          </label>
-          <label>Porte
-            <select id="demo-porte" required>
-              <option value="MEI">MEI</option>
-              <option value="ME">ME</option>
-              <option value="EPP">EPP</option>
-              <option value="MEDIA">MEDIA</option>
-              <option value="GRANDE">GRANDE</option>
-            </select>
-          </label>
-          <button type="submit" class="btn btn-primary btn-block">Incluir cliente</button>
-        </form>
+        <div class="demo-form-col">
+          <div class="operator-card">
+            <p class="operator-label">Operador simulado</p>
+            <p class="operator-name" id="operator-name">&mdash;</p>
+            <p class="operator-vertical" id="operator-vertical">&nbsp;</p>
+            <p class="operator-hint">Simula&ccedil;&atilde;o de operador para demonstra&ccedil;&atilde;o das regras de permiss&atilde;o &mdash; n&atilde;o &eacute; um login real.</p>
+          </div>
+
+          <form id="demo-form" class="demo-form" novalidate>
+            <label>Voc&ecirc; est&aacute; simulando
+              <select id="demo-gestor-atual" required></select>
+            </label>
+            <label>Raz&atilde;o social
+              <input type="text" id="demo-razao-social" maxlength="80" required placeholder="Ex: Comercial Exemplo Ltda" autocomplete="off">
+              <span class="field-error" id="erro-razao-social" aria-live="polite"></span>
+            </label>
+            <label>CNPJ
+              <input type="text" id="demo-cnpj" inputmode="numeric" required placeholder="00.000.000/0000-00" autocomplete="off">
+              <span class="field-error" id="erro-cnpj" aria-live="polite"></span>
+            </label>
+            <label>Porte
+              <select id="demo-porte" required>
+                <option value="MEI">MEI</option>
+                <option value="ME">ME</option>
+                <option value="EPP">EPP</option>
+                <option value="MEDIA">MEDIA</option>
+                <option value="GRANDE">GRANDE</option>
+              </select>
+            </label>
+            <button type="submit" class="btn btn-primary btn-block" id="demo-submit" disabled>
+              <span class="btn-spinner" hidden></span>
+              <span class="btn-label">Incluir cliente</span>
+            </button>
+          </form>
+        </div>
 
         <div class="demo-list">
-          <h4>Clientes inclu&iacute;dos no sandbox</h4>
+          <h4>Clientes do sandbox</h4>
           <div class="table-wrap">
             <table class="data-table" id="table-demo-clientes">
               <thead>
@@ -236,24 +259,76 @@
               <tbody></tbody>
             </table>
           </div>
-          <p class="empty-state" id="demo-clientes-empty" hidden>Ningu&eacute;m incluiu um cliente ainda &mdash; seja o primeiro, usando o formul&aacute;rio ao lado.</p>
+          <p class="empty-state" id="demo-clientes-empty" hidden>
+            Nenhum cliente no sandbox.<br>Use o formul&aacute;rio ao lado para criar o primeiro registro.
+          </p>
         </div>
       </div>
 
       <div class="table-wrap">
-        <h4>Log de altera&ccedil;&otilde;es do sandbox</h4>
-        <table class="data-table" id="table-demo-log">
-          <thead>
-            <tr><th>Quando</th><th>Opera&ccedil;&atilde;o</th><th>Campo</th><th>Antigo &rarr; Novo</th><th>Gestor</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <h4>Auditoria do sandbox</h4>
+        <div class="timeline" id="table-demo-log"></div>
         <p class="empty-state" id="demo-log-empty" hidden>Nenhuma altera&ccedil;&atilde;o no sandbox ainda.</p>
       </div>
     </div>
-
-    <p class="demo-feedback" id="demo-feedback" hidden></p>
   </section>
+
+  <!-- Modais do sandbox -->
+  <div class="modal-overlay" id="modal-overlay" hidden>
+    <div class="modal-dialog" id="modal-editar" role="dialog" aria-modal="true" aria-labelledby="modal-editar-title" hidden>
+      <h4 id="modal-editar-title">Editar cliente</h4>
+      <form id="form-editar" novalidate>
+        <label>Raz&atilde;o social
+          <input type="text" id="editar-razao-social" maxlength="80" required>
+          <span class="field-error" id="erro-editar-razao-social" aria-live="polite"></span>
+        </label>
+        <label>Porte
+          <select id="editar-porte">
+            <option value="MEI">MEI</option>
+            <option value="ME">ME</option>
+            <option value="EPP">EPP</option>
+            <option value="MEDIA">MEDIA</option>
+            <option value="GRANDE">GRANDE</option>
+          </select>
+        </label>
+        <div class="modal-readonly">
+          <span>Gestor respons&aacute;vel: <strong id="editar-gestor-nome"></strong></span>
+          <span>Vertical: <strong id="editar-gestor-vertical"></strong></span>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" data-modal-close>Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="editar-submit">
+            <span class="btn-spinner" hidden></span>
+            <span class="btn-label">Salvar altera&ccedil;&otilde;es</span>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div class="modal-dialog" id="modal-excluir" role="dialog" aria-modal="true" aria-labelledby="modal-excluir-title" hidden>
+      <h4 id="modal-excluir-title">Excluir cliente?</h4>
+      <p class="modal-target-name" id="excluir-nome-cliente"></p>
+      <p class="modal-text">Essa a&ccedil;&atilde;o remove o cliente da visualiza&ccedil;&atilde;o do sandbox &mdash; o registro continua no banco, marcado como inativo.</p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" data-modal-close>Cancelar</button>
+        <button type="button" class="btn btn-danger" id="excluir-confirmar">
+          <span class="btn-spinner" hidden></span>
+          <span class="btn-label">Excluir cliente</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="modal-dialog" id="modal-bloqueado" role="dialog" aria-modal="true" aria-labelledby="modal-bloqueado-title" hidden>
+      <p class="modal-icon" aria-hidden="true">&#8856;</p>
+      <h4 id="modal-bloqueado-title">A&ccedil;&atilde;o n&atilde;o permitida</h4>
+      <p class="modal-text" id="modal-bloqueado-texto">Este cliente pertence a outra vertical. A regra de permiss&atilde;o impede esta altera&ccedil;&atilde;o.</p>
+      <div class="modal-actions modal-actions-center">
+        <button type="button" class="btn btn-primary" data-modal-close>Entendi</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
 
   <!-- ranking de gestores -->
   <section class="wrap section-pad">
