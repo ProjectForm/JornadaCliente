@@ -57,6 +57,7 @@
       <div class="filter-bar-head">
         <span class="filter-bar-title">Filtros do dashboard</span>
         <span class="filter-result-count" id="filter-result-count">Carregando dados...</span>
+        <button type="button" class="btn btn-primary btn-sm" id="filter-ver-clientes" hidden>Ver clientes filtrados &rarr;</button>
         <button type="button" class="filter-clear" id="filter-clear" hidden>Limpar filtros</button>
       </div>
       <div class="filter-groups">
@@ -90,7 +91,7 @@
       </div>
     </div>
 
-    <div class="impact-card" data-reveal style="margin-bottom:20px">
+    <div class="impact-card" data-reveal style="margin-bottom:16px">
       <p class="eyebrow" style="justify-content:center">Esfor&ccedil;o manual estimado por ciclo</p>
       <div class="impact-row" id="impact-figure">
         <div class="impact-figure is-before">
@@ -110,17 +111,48 @@
     <div class="kpi-row" id="kpi-row" data-reveal>
       <div class="stat-tile skeleton"><span class="stat-label">% PJ Distintos</span><span class="stat-value">&nbsp;</span></div>
       <div class="stat-tile skeleton"><span class="stat-label">Inconsistencias</span><span class="stat-value">&nbsp;</span></div>
+      <div class="stat-tile skeleton"><span class="stat-label">Sem atendimento</span><span class="stat-value">&nbsp;</span></div>
       <div class="stat-tile skeleton"><span class="stat-label">% Respondentes da pesquisa</span><span class="stat-value">&nbsp;</span></div>
       <div class="stat-tile skeleton"><span class="stat-label">Aumento medio de faturamento</span><span class="stat-value">&nbsp;</span></div>
     </div>
   </section>
 
+  <!-- 03 — DATASET (logo apos os filtros, que tambem a controlam) -->
+  <section class="wrap section-pad-sm" id="dataset">
+    <div class="card lift" data-reveal>
+      <div class="card-head">
+        <p class="eyebrow"><span class="index">03</span> Dataset
+          <span class="filtro-indicator" hidden>&middot; <span class="filtro-indicator-text"></span> <button type="button" class="filtro-indicator-clear" data-clear-filtros>Limpar</button></span>
+        </p>
+        <h3>Base de clientes</h3>
+        <p class="dataset-count" id="dataset-count">2.500 clientes</p>
+        <p class="card-sub">Os 2500 clientes sint&eacute;ticos do dataset &mdash; usa os filtros acima, mais busca e pagina&ccedil;&atilde;o aqui (somente leitura, clique numa linha para ver o detalhe)</p>
+      </div>
+      <div class="filters-row">
+        <input type="search" id="clientes-busca" placeholder="Buscar por razao social ou CNPJ..." class="input-search">
+        <button type="button" class="btn btn-ghost btn-sm" id="dataset-exportar">Exportar XLSX</button>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table" id="table-clientes">
+          <thead>
+            <tr>
+              <th>Cliente</th><th>CNPJ</th><th>Porte</th><th>Municipio</th>
+              <th>Gestor</th><th>Vertical</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="pager" id="clientes-pager"></div>
+    </div>
+  </section>
+
   <hr class="divider wrap">
 
-  <!-- 03 — O PROBLEMA -->
+  <!-- 04 — O PROBLEMA -->
   <section class="wrap section-pad-sm" id="problema">
     <div class="section-head" data-reveal>
-      <p class="eyebrow"><span class="index">03</span> O problema</p>
+      <p class="eyebrow"><span class="index">04</span> O problema</p>
       <h2 class="section-title">Uma regra de neg&oacute;cio, mil planilhas de dist&acirc;ncia.</h2>
     </div>
     <p class="section-sub" data-reveal style="max-width:70ch;font-size:var(--fs-body)">
@@ -133,10 +165,10 @@
     </p>
   </section>
 
-  <!-- 04 — ARQUITETURA -->
+  <!-- 05 — ARQUITETURA -->
   <section class="wrap section-pad-sm" id="arquitetura">
     <div class="section-head" data-reveal>
-      <p class="eyebrow"><span class="index">04</span> Arquitetura</p>
+      <p class="eyebrow"><span class="index">05</span> Arquitetura</p>
       <h2 class="section-title">Seis camadas, uma decis&atilde;o.</h2>
     </div>
     <div class="arch-flow" data-reveal>
@@ -151,10 +183,10 @@
 
   <hr class="divider wrap">
 
-  <!-- 05 — DASHBOARD -->
+  <!-- 06 — DASHBOARD -->
   <section class="wrap section-pad" id="dashboard">
     <div class="section-head" data-reveal>
-      <p class="eyebrow"><span class="index">05</span> Dashboard</p>
+      <p class="eyebrow"><span class="index">06</span> Dashboard</p>
       <h2 class="section-title">PJ Distintos e status, por vertical.</h2>
       <span class="filtro-indicator" hidden>&middot; <span class="filtro-indicator-text"></span> <button type="button" class="filtro-indicator-clear" data-clear-filtros>Limpar</button></span>
     </div>
@@ -180,40 +212,12 @@
       </div>
     </div>
 
-    <div class="card lift" data-reveal style="margin-top:20px">
+    <div class="card lift" data-reveal style="margin-top:16px">
       <div class="card-head">
         <h3>Aumento m&eacute;dio de faturamento por porte</h3>
         <p class="card-sub">Entre clientes respondentes da pesquisa &mdash; indica qual segmento mais se beneficia do programa</p>
       </div>
       <div id="chart-faturamento" class="bar-chart" role="img" aria-label="Grafico de barras: aumento medio de faturamento por porte"></div>
-    </div>
-  </section>
-
-  <!-- 06 — DATASET -->
-  <section class="wrap section-pad" id="dataset">
-    <div class="card lift" data-reveal>
-      <div class="card-head">
-        <p class="eyebrow"><span class="index">06</span> Dataset
-          <span class="filtro-indicator" hidden>&middot; <span class="filtro-indicator-text"></span> <button type="button" class="filtro-indicator-clear" data-clear-filtros>Limpar</button></span>
-        </p>
-        <h3>Base de clientes</h3>
-        <p class="card-sub">Os 2500 clientes sint&eacute;ticos do dataset &mdash; usa os filtros do dashboard acima, mais busca e pagina&ccedil;&atilde;o aqui (somente leitura, clique numa linha para ver o detalhe)</p>
-      </div>
-      <div class="filters-row">
-        <input type="search" id="clientes-busca" placeholder="Buscar por razao social ou CNPJ..." class="input-search">
-      </div>
-      <div class="table-wrap">
-        <table class="data-table" id="table-clientes">
-          <thead>
-            <tr>
-              <th>Cliente</th><th>CNPJ</th><th>Porte</th><th>Municipio</th>
-              <th>Gestor</th><th>Vertical</th><th>Status</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <div class="pager" id="clientes-pager"></div>
     </div>
   </section>
 
@@ -240,6 +244,11 @@
             <span class="sync-dot"></span><span class="sync-text">&mdash;</span>
           </span>
           <span class="sync-last" id="sandbox-last-sync"></span>
+          <div class="sync-row-actions">
+            <button type="button" class="btn btn-ghost btn-sm" id="sandbox-baixar-modelo">Baixar modelo XLSX</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="sandbox-importar-abrir">Importar XLSX</button>
+            <input type="file" id="sandbox-importar-arquivo" accept=".xlsx" hidden>
+          </div>
         </div>
       </div>
 
@@ -406,6 +415,25 @@
       </div>
     </div>
 
+    <div class="modal-dialog modal-dialog-wide" id="modal-importar" role="dialog" aria-modal="true" aria-labelledby="modal-importar-title" hidden>
+      <h4 id="modal-importar-title">Importar clientes (XLSX)</h4>
+      <p class="modal-text modal-text-muted" id="importar-resumo">Selecione um arquivo XLSX gerado a partir do modelo.</p>
+      <div id="importar-erros" class="importar-erros"></div>
+      <div class="table-wrap importar-preview-wrap">
+        <table class="data-table" id="importar-preview-tabela">
+          <thead><tr><th>Linha</th><th>Razao social</th><th>CNPJ</th><th>Gestor</th><th>Situacao</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" data-modal-close>Cancelar</button>
+        <button type="button" class="btn btn-primary" id="importar-confirmar" disabled>
+          <span class="btn-spinner" hidden></span>
+          <span class="btn-label">Confirmar importa&ccedil;&atilde;o</span>
+        </button>
+      </div>
+    </div>
+
     <div class="modal-dialog" id="modal-info" role="dialog" aria-modal="true" aria-labelledby="modal-info-title" hidden>
       <h4 id="modal-info-title">Como este indicador &eacute; calculado</h4>
       <p class="modal-text" id="modal-info-texto"></p>
@@ -466,7 +494,7 @@
           <thead>
             <tr>
               <th>Gestor</th><th>Vertical</th><th class="num">Clientes</th>
-              <th class="num">PJ Distintos</th><th></th>
+              <th class="num">PJ Distintos</th><th></th><th class="num">% Conclus&atilde;o</th>
               <th class="num">Inconsistencias</th><th class="num">% Respondentes</th>
             </tr>
           </thead>
@@ -508,7 +536,13 @@
   <!-- 10 — POWER BI -->
   <section class="wrap section-pad" id="powerbi">
     <div class="card powerbi-card" data-reveal>
-      <div class="powerbi-icon">&#128202;</div>
+      <div class="powerbi-icon" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="4" y="10" width="4" height="10"></rect>
+          <rect x="10" y="5" width="4" height="15"></rect>
+          <rect x="16" y="13" width="4" height="7"></rect>
+        </svg>
+      </div>
       <span class="powerbi-badge"><span class="index">10</span> Power BI</span>
       <div id="powerbi-embed"></div>
       <ul class="powerbi-model-tags" id="powerbi-model-tags"></ul>
@@ -526,6 +560,7 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="assets/app.js"></script>
 <script src="assets/supabase-demo.js"></script>
 </body>

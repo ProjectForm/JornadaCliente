@@ -207,9 +207,11 @@ function montarKPIs(resumo) {
   setCountTarget(document.getElementById("kpi-total-clientes"), resumo.total_clientes);
   setCountTarget(document.getElementById("kpi-pj-distintos"), resumo.pj_distintos);
 
+  const semAtendimento = resumo.status_contagem["Sem atendimento"] || 0;
   const secundarios = [
     ["% PJ Distintos", resumo.pct_pj_distintos, 1, "%"],
     ["Inconsistencias", resumo.total_inconsistencias, 0, ""],
+    ["Sem atendimento", semAtendimento, 0, ""],
     ["% Respondentes da pesquisa", resumo.pct_respondentes, 1, "%"],
     ["Aumento medio de faturamento", resumo.media_aumento_faturamento_pct, 1, "%"],
   ];
@@ -365,6 +367,7 @@ function montarTabelaGestores(dados) {
       <td class="num">${fmtInt(g.clientes_na_carteira)}</td>
       <td class="num">${fmtInt(g.pj_distintos)}</td>
       <td class="mini-bar-cell"><div class="mini-bar-track"><div class="mini-bar-fill" style="width:${(g.pj_distintos / max) * 100}%"></div></div></td>
+      <td class="num">${fmtPct(g.clientes_na_carteira ? Math.round((1000 * g.pj_distintos) / g.clientes_na_carteira) / 10 : 0)}</td>
       <td class="num">${fmtInt(g.total_inconsistencias)}</td>
       <td class="num">${fmtPct(g.pct_respondeu)}</td>
     </tr>
@@ -413,6 +416,10 @@ function montarLog(logAlteracoes) {
    ============================================================================ */
 function renderizarTabelaClientes() {
   const { filtrados, pagina } = tabelaState;
+  const totalGeral = dashState.todos.length;
+  document.getElementById("dataset-count").textContent = filtrados.length === totalGeral
+    ? `${fmtInt(totalGeral)} clientes`
+    : `${fmtInt(filtrados.length)} de ${fmtInt(totalGeral)} clientes`;
   const totalPaginas = Math.max(1, Math.ceil(filtrados.length / CLIENTES_POR_PAGINA));
   const inicio = (pagina - 1) * CLIENTES_POR_PAGINA;
   const pageRows = filtrados.slice(inicio, inicio + CLIENTES_POR_PAGINA);
@@ -562,6 +569,7 @@ function atualizarFilterBarUI(totalFiltrado) {
 
   const algumAtivo = !!(vertical.size || status.size || porte.size || gestor);
   document.getElementById("filter-clear").hidden = !algumAtivo;
+  document.getElementById("filter-ver-clientes").hidden = !algumAtivo;
 
   const total = dashState.todos.length;
   document.getElementById("filter-result-count").textContent = algumAtivo
@@ -625,12 +633,80 @@ function construirFiltroBar(clientes) {
 }
 
 /* ============================================================================
+   "VER CLIENTES FILTRADOS" + EXPORTACAO XLSX DA BASE (fluxo: filtrar -> ver
+   resultado -> encontrar clientes -> analisar/exportar)
+   ============================================================================ */
+function irParaBaseFiltrada() {
+  const card = document.querySelector("#dataset .card");
+  document.getElementById("dataset").scrollIntoView({ behavior: "smooth", block: "start" });
+  if (!card) return;
+  card.classList.add("is-flash");
+  setTimeout(() => card.classList.remove("is-flash"), 1200);
+}
+
+function nomeArquivoExport(prefixo) {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${prefixo}_${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}.xlsx`;
+}
+
+function descreverFiltrosAtivos() {
+  const { vertical, status, porte, gestor } = dashState.filtros;
+  const partes = [];
+  if (vertical.size) partes.push(`Vertical: ${[...vertical].join(", ")}`);
+  if (status.size) partes.push(`Status: ${[...status].join(", ")}`);
+  if (porte.size) partes.push(`Porte: ${[...porte].join(", ")}`);
+  if (gestor) partes.push(`Gestor: ${gestor}`);
+  const busca = document.getElementById("clientes-busca").value.trim();
+  if (busca) partes.push(`Busca: "${busca}"`);
+  return partes.length ? partes.join(" | ") : "Nenhum filtro aplicado (base completa)";
+}
+
+function exportarClientesXLSX() {
+  if (typeof XLSX === "undefined") {
+    if (typeof toast === "function") toast("Biblioteca de exportacao nao carregou.", "error");
+    return;
+  }
+  const linhas = tabelaState.filtrados.map((c) => ({
+    "Cliente": c.razao_social,
+    "CNPJ": c.cnpj,
+    "Porte": c.porte,
+    "Municipio": c.municipio || "",
+    "Gestor": c.gestor,
+    "Vertical": c.vertical,
+    "Status": c.status,
+    "PJ Distinto": c.pj_distinto_oficial === 1 ? "Sim" : "Nao",
+    "Inconsistencias": c.qtd_planos_inconsistentes,
+    "Respondeu pesquisa": c.respondeu === 1 ? "Sim" : "Nao",
+    "Aumento faturamento (%)": c.aumento_faturamento_pct ?? "",
+  }));
+
+  const cabecalho = [
+    ["Jornada Cliente — Exportacao da Base de Clientes"],
+    [`Gerado em: ${new Date().toLocaleString("pt-BR")}`],
+    [`Filtros aplicados: ${descreverFiltrosAtivos()}`],
+    [`Total de registros: ${linhas.length}`],
+    [],
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(cabecalho);
+  XLSX.utils.sheet_add_json(ws, linhas, { origin: `A${cabecalho.length + 1}` });
+  ws["!cols"] = [{ wch: 32 }, { wch: 18 }, { wch: 8 }, { wch: 20 }, { wch: 20 }, { wch: 24 }, { wch: 16 }, { wch: 11 }, { wch: 14 }, { wch: 16 }, { wch: 18 }];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Clientes");
+  XLSX.writeFile(wb, nomeArquivoExport("JornadaCliente_Clientes"));
+  if (typeof toast === "function") toast(`${linhas.length} clientes exportados.`, "success");
+}
+
+/* ============================================================================
    WIRING (uma unica vez) -- delegacao de clique nos containers persistentes
    (o innerHTML interno e recriado a cada filtro, mas os containers em si
    nunca sao substituidos, entao o listener nao precisa ser re-anexado)
    ============================================================================ */
 function wireInteracoesDashboard() {
   document.getElementById("filter-clear").addEventListener("click", limparFiltros);
+  document.getElementById("filter-ver-clientes").addEventListener("click", irParaBaseFiltrada);
+  document.getElementById("dataset-exportar").addEventListener("click", exportarClientesXLSX);
   document.getElementById("filter-gestor").addEventListener("change", (e) => {
     dashState.filtros.gestor = e.target.value || null;
     aplicarFiltrosGlobais();

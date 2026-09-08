@@ -845,6 +845,219 @@ async function onClickExcluir() {
 }
 
 /* ============================================================================
+   IMPORTACAO EM MASSA (XLSX) -- reaproveita a MESMA RPC demo_incluir_cliente
+   (mesma validacao/limite/permissao de uma inclusao manual), so em lote.
+   Nao mexe no schema: campos fora do que demo_incluir_cliente ja aceita
+   (cpf/celular/termo/etc) ficam de fora do modelo, editaveis depois um a um
+   pelo modal "Editar".
+   ============================================================================ */
+let importacaoValidada = [];
+
+function baixarModeloXLSX() {
+  if (typeof XLSX === "undefined") { toast("Biblioteca de exportacao nao carregou.", "error"); return; }
+
+  const listaGestores = gestoresPorId.size
+    ? [...gestoresPorId.values()].map((g) => [`  ${g.nome} (${g.vertical})`])
+    : [["  (conecte-se ao sandbox para ver a lista atualizada de gestores)"]];
+
+  const instrucoes = [
+    ["Modelo de importacao -- Sandbox Jornada Cliente"],
+    [],
+    ["Preencha a aba 'Clientes' abaixo e depois use o botao 'Importar XLSX' no site."],
+    [],
+    ["Campos obrigatorios:"],
+    ["  Gestor -- nome exato de um dos gestores do sandbox (lista abaixo)"],
+    ["  Razao Social"],
+    ["  CNPJ -- 14 digitos (com ou sem pontuacao)"],
+    ["  Porte -- MEI, ME, EPP, MEDIA ou GRANDE"],
+    [],
+    ["Campos opcionais:"],
+    ["  Municipio, Observacoes"],
+    ["  ALI, Prioritario, Pesquisa respondida -- preencher com Sim ou Nao (em branco = Nao)"],
+    ["  % Aumento de faturamento -- numero; so e gravado se 'Pesquisa respondida' = Sim"],
+    [],
+    ["Gestores disponiveis:"],
+    ...listaGestores,
+    [],
+    ["Campos calculados automaticamente pelo sistema (nao preencher aqui):"],
+    ["  Status, PJ Distinto, Inconsistencias -- dependem dos Atendimentos por Centro de Custo,"],
+    ["  que sao definidos depois da importacao, cliente por cliente, no botao 'Atendimentos'."],
+    [],
+    ["Outros campos do cadastro (CPF, Celular, Termo, WhatsApp/E-mail atualizado, Data da"],
+    ["pesquisa) existem no sistema mas nao fazem parte deste modelo de importacao em massa --"],
+    ["podem ser preenchidos depois, cliente por cliente, no botao 'Editar'."],
+  ];
+  const wsInstrucoes = XLSX.utils.aoa_to_sheet(instrucoes);
+  wsInstrucoes["!cols"] = [{ wch: 92 }];
+
+  const exemplo = [{
+    "Gestor": gestoresPorId.size ? [...gestoresPorId.values()][0].nome : "Ana Souza",
+    "Razao Social": "Comercial Exemplo Ltda",
+    "CNPJ": "12345678000199",
+    "Porte": "ME",
+    "Municipio": "Sao Paulo",
+    "ALI": "Nao",
+    "Prioritario": "Nao",
+    "Pesquisa respondida": "Sim",
+    "% Aumento de faturamento": 15.5,
+    "Observacoes": "",
+  }];
+  const wsClientes = XLSX.utils.json_to_sheet(exemplo);
+  wsClientes["!cols"] = [{ wch: 20 }, { wch: 30 }, { wch: 18 }, { wch: 8 }, { wch: 18 }, { wch: 8 }, { wch: 11 }, { wch: 18 }, { wch: 22 }, { wch: 30 }];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, wsInstrucoes, "Instrucoes");
+  XLSX.utils.book_append_sheet(wb, wsClientes, "Clientes");
+  XLSX.writeFile(wb, "JornadaCliente_Modelo_Importacao.xlsx");
+}
+
+function normalizarBooleanoImportacao(v) {
+  return ["sim", "s", "true", "1", "yes"].includes(String(v).trim().toLowerCase());
+}
+
+function acharColuna(linha, ...nomes) {
+  const chaves = Object.keys(linha);
+  for (const nome of nomes) {
+    const achado = chaves.find((k) => k.trim().toLowerCase() === nome.toLowerCase());
+    if (achado !== undefined) return linha[achado];
+  }
+  return "";
+}
+
+function processarImportacao(linhasBrutas) {
+  const cnpjsNoArquivo = new Set();
+  const cnpjsExistentes = new Set(sandboxClientes.map((c) => somenteDigitos(c.cnpj)));
+
+  const resultado = linhasBrutas.map((linha, i) => {
+    const numeroLinha = i + 2;
+    const gestorNome = String(acharColuna(linha, "Gestor")).trim();
+    const razaoSocial = String(acharColuna(linha, "Razao Social", "Razão Social", "Nome")).trim();
+    const cnpjDigits = somenteDigitos(String(acharColuna(linha, "CNPJ")));
+    const porte = String(acharColuna(linha, "Porte")).trim().toUpperCase();
+    const municipio = String(acharColuna(linha, "Municipio", "Município")).trim();
+    const observacoes = String(acharColuna(linha, "Observacoes", "Observações")).trim();
+    const ali = normalizarBooleanoImportacao(acharColuna(linha, "ALI"));
+    const prioritario = normalizarBooleanoImportacao(acharColuna(linha, "Prioritario", "Prioritário"));
+    const respondeu = normalizarBooleanoImportacao(acharColuna(linha, "Pesquisa respondida"));
+    const aumentoRaw = acharColuna(linha, "% Aumento de faturamento", "% Aumento");
+    const aumento = aumentoRaw === "" ? null : Number(aumentoRaw);
+
+    const erros = [];
+    const gestor = [...gestoresPorId.values()].find((g) => g.nome.toLowerCase() === gestorNome.toLowerCase());
+    if (!gestorNome) erros.push("Gestor obrigatorio");
+    else if (!gestor) erros.push(`Gestor "${gestorNome}" nao encontrado`);
+    if (!razaoSocial) erros.push("Razao social obrigatoria");
+    if (!cnpjDigits || cnpjDigits.length !== CNPJ_LEN) erros.push("CNPJ invalido (14 digitos)");
+    if (!["MEI", "ME", "EPP", "MEDIA", "GRANDE"].includes(porte)) erros.push("Porte invalido");
+
+    let duplicado = false;
+    if (cnpjDigits && cnpjDigits.length === CNPJ_LEN) {
+      if (cnpjsExistentes.has(cnpjDigits) || cnpjsNoArquivo.has(cnpjDigits)) { duplicado = true; erros.push("CNPJ duplicado"); }
+      else cnpjsNoArquivo.add(cnpjDigits);
+    }
+
+    return {
+      linha: numeroLinha, razaoSocial, cnpjDigits, porte, gestorId: gestor?.gestor_id, gestorNome,
+      municipio, observacoes, ali, prioritario, respondeu, aumento,
+      valido: erros.length === 0, duplicado, erros,
+    };
+  });
+
+  importacaoValidada = resultado;
+  renderizarPreviewImportacao(resultado);
+  abrirModal("modal-importar");
+}
+
+function renderizarPreviewImportacao(resultado) {
+  const validos = resultado.filter((r) => r.valido);
+  const duplicados = resultado.filter((r) => r.duplicado);
+  const invalidos = resultado.filter((r) => !r.valido && !r.duplicado);
+
+  $("importar-resumo").innerHTML = `
+    <div class="importar-resumo-contagem">
+      <span><strong>${validos.length}</strong> validos</span>
+      <span><strong>${invalidos.length}</strong> invalidos</span>
+      <span><strong>${duplicados.length}</strong> duplicados</span>
+      <span>Total no arquivo: <strong>${resultado.length}</strong></span>
+    </div>
+  `;
+
+  $("importar-erros").innerHTML = resultado.filter((r) => !r.valido).map((r) => `
+    <div class="importar-erro-item"><strong>Linha ${r.linha}</strong> &mdash; ${escapeHtml(r.erros.join("; "))}</div>
+  `).join("");
+
+  document.querySelector("#importar-preview-tabela tbody").innerHTML = resultado.map((r) => `
+    <tr>
+      <td>${r.linha}</td>
+      <td>${escapeHtml(r.razaoSocial || "--")}</td>
+      <td>${escapeHtml(r.cnpjDigits || "--")}</td>
+      <td>${escapeHtml(r.gestorNome || "--")}</td>
+      <td>${r.valido ? '<span class="badge badge-insert">Valido</span>' : `<span class="badge badge-delete">${r.duplicado ? "Duplicado" : "Invalido"}</span>`}</td>
+    </tr>
+  `).join("");
+
+  const btn = $("importar-confirmar");
+  btn.disabled = validos.length === 0;
+  setButtonState(btn, "default", { defaultLabel: `Confirmar importacao (${validos.length})` });
+}
+
+async function onArquivoImportacaoSelecionado(e) {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  if (typeof XLSX === "undefined") { toast("Biblioteca de importacao nao carregou.", "error"); return; }
+
+  try {
+    const buffer = await file.arrayBuffer();
+    const wb = XLSX.read(buffer, { type: "array" });
+    const nomeAba = wb.SheetNames.find((n) => n.toLowerCase().includes("cliente")) || wb.SheetNames[0];
+    const linhasBrutas = XLSX.utils.sheet_to_json(wb.Sheets[nomeAba], { defval: "" });
+    if (!linhasBrutas.length) { toast("O arquivo nao tem linhas de clientes.", "error"); return; }
+    processarImportacao(linhasBrutas);
+  } catch (err) {
+    console.error(err);
+    toast("Nao foi possivel ler o arquivo XLSX.", "error");
+  }
+}
+
+async function onConfirmarImportacao() {
+  const validos = importacaoValidada.filter((r) => r.valido);
+  if (!validos.length) return;
+  if (connState !== "online") { toast("Sandbox indisponivel no momento.", "error"); return; }
+
+  const btn = $("importar-confirmar");
+  setButtonState(btn, "loading", { loadingLabel: `Importando 0/${validos.length}...` });
+
+  let sucesso = 0, falha = 0;
+  const falhas = [];
+  for (let i = 0; i < validos.length; i++) {
+    const r = validos[i];
+    btn.querySelector(".btn-label").textContent = `Importando ${i + 1}/${validos.length}...`;
+    try {
+      await incluirClienteDemo({
+        gestorId: r.gestorId, razaoSocial: r.razaoSocial, cnpj: r.cnpjDigits, porte: r.porte,
+        extra: {
+          municipio: r.municipio || null, ali: r.ali, prioritario: r.prioritario,
+          observacoes: r.observacoes || null, respondeu: r.respondeu,
+          aumento_faturamento_pct: r.respondeu ? r.aumento : null,
+        },
+      });
+      sucesso++;
+    } catch (err) {
+      falha++;
+      falhas.push(`Linha ${r.linha}: ${err?.message || "erro desconhecido"}`);
+    }
+  }
+
+  setButtonState(btn, "default", { defaultLabel: "Confirmar importacao" });
+  await recarregarSandboxEAtualizarTudo({ highlightLog: true });
+  fecharModal();
+
+  if (falha === 0) toast(`${sucesso} clientes importados com sucesso.`, "success");
+  else toast(`${sucesso} importados, ${falha} falharam (${falhas[0]}).`, "error");
+}
+
+/* ============================================================================
    WIRING ESTATICO -- roda sempre, mesmo se a conexao com o Supabase falhar
    ============================================================================ */
 function wireEstatico() {
@@ -869,6 +1082,11 @@ function wireEstatico() {
   $("modal-overlay").addEventListener("click", (e) => { if (e.target === $("modal-overlay")) fecharModal(); });
 
   $("conn-retry").addEventListener("click", tentarConectar);
+
+  $("sandbox-baixar-modelo").addEventListener("click", baixarModeloXLSX);
+  $("sandbox-importar-abrir").addEventListener("click", () => $("sandbox-importar-arquivo").click());
+  $("sandbox-importar-arquivo").addEventListener("change", onArquivoImportacaoSelecionado);
+  $("importar-confirmar").addEventListener("click", onConfirmarImportacao);
 
   $("sandbox-ranking-criterio").addEventListener("change", (e) => {
     criterioRanking = e.target.value;
