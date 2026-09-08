@@ -18,6 +18,25 @@ clientes direto no banco -- toda operacao de escrita ja reexporta os CSVs em
 `data/reports/`. Depois e so clicar "Atualizar" no Power BI (ou apontar
 direto pra `data/reports/*.csv`, que e o formato mais simples de conectar).
 
+## 1b. Consultar o modelo aberto via linha de comando (Windows)
+
+Enquanto o Power BI Desktop esta aberto, ele sobe um motor Analysis Services
+local (`msmdsrv.exe`) numa porta aleatoria em `127.0.0.1`. `powerbi/pbi_query.ps1`
+autodetecta processo, porta e catalogo e roda DAX ou DMVs contra o modelo
+aberto no momento, sem precisar descobrir nada manualmente:
+
+```powershell
+powershell -File powerbi\pbi_query.ps1                                   # lista tabelas do modelo
+powershell -File powerbi\pbi_query.ps1 -Query "EVALUATE Clientes"
+powershell -File powerbi\pbi_query.ps1 -Query "SELECT [Name],[Expression] FROM `$SYSTEM.TMSCHEMA_MEASURES"
+powershell -File powerbi\pbi_query.ps1 -Query "EVALUATE Clientes" -Csv saida.csv
+```
+
+So funciona com o Power BI Desktop aberto na mesma maquina (usa
+`Microsoft.PowerBI.AdomdClient.dll`, que vem instalada junto com o Desktop).
+`EVALUATE` so responde depois que o modelo tiver pelo menos uma tabela
+carregada; DMVs (`$SYSTEM.*`) funcionam mesmo com o modelo vazio.
+
 ## 2. Tabelas do modelo
 - Clientes <- v_dados_cliente (fato, 1 linha por cliente; ja filtra clientes
   excluidos via soft delete, `ativo = 1`)
