@@ -86,7 +86,7 @@ problema, proposta de valor, decisões de UX); aqui o resumo técnico:
   camada Python/Pandas do pipeline), mas o site publicado não lê mais esses
   arquivos — lê o Supabase diretamente.
 - **Relatório Power BI** publicado embutido (quando o link de "Publicar na
-  Web" estiver preenchido — ver `powerbi/modelo_de_dados_e_dax.md`, seção 7).
+  Web" estiver preenchido — ver `powerbi/modelo_de_dados_e_dax.md`).
 
 ## 6. Como rodar
 
