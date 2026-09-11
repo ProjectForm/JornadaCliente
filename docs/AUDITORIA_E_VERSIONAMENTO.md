@@ -1,10 +1,12 @@
-# Auditoria e versionamento — arquitetura (Etapa 2)
+# Auditoria e versionamento — arquitetura (Etapa 2 + 2.5)
 
 > Como o histórico, o versionamento, a restauração e a reatribuição de gestor
-> foram implementados no Cadastro, e por quê. Ver `supabase/schema_demo_v2_operacao.sql`
-> (migração aditiva — rodar no SQL Editor do Supabase) e a seção correspondente
-> em `supabase/schema_demo.sql` (schema completo "do zero", já com as mesmas
-> mudanças incorporadas).
+> foram implementados no Cadastro (Etapa 2), e como Dashboard e Cadastro
+> passaram a ler a mesma base ao vivo (Etapa 2.5 — §8). Ver
+> `supabase/schema_demo_v2_operacao.sql` + `supabase/schema_demo_v3_unificacao.sql`
+> + `supabase/seed_unificacao_2500_clientes.sql` (migrações aditivas — rodar
+> no SQL Editor do Supabase, nessa ordem) e `supabase/schema_demo.sql`
+> (schema completo "do zero", já com todas as mudanças incorporadas).
 
 ## 1. O que já existia (Etapa 1) e foi reaproveitado
 
@@ -172,13 +174,14 @@ sozinho.
   aqui.
 - **Snapshot/backup administrativo amplo** (item 20 do pedido original —
   snapshot diário da base inteira, backup administrativo): não implementado.
-  A combinação de versionamento por cliente (`demo_clientes_versoes`) +
-  autolimpeza diária de 24h (já existente desde a Etapa 1, agora estendida
-  para também limpar `demo_clientes_versoes`) cobre a necessidade real deste
-  ambiente de demonstração (que é efêmero por design). Um backup
-  administrativo formal faria mais sentido quando este deixar de ser um
-  ambiente de demonstração com limpeza automática — registrado aqui como
-  pendência explícita, não esquecida.
+  Na Etapa 2 isso era coberto pela combinação de versionamento por cliente +
+  autolimpeza diária de 24h — mas a Etapa 2.5 **removeu** a autolimpeza (ver
+  §8 abaixo), então esse argumento não vale mais. Sem um backup real, a
+  única rede de segurança hoje é `demo_clientes_versoes` (histórico por
+  cliente, não da base inteira) — um backup administrativo amplo (snapshot
+  diário completo, por exemplo via `pg_dump` agendado ou uma tabela de
+  snapshot da base inteira) passou a ser uma pendência mais importante do
+  que era antes, registrada aqui explicitamente para uma próxima etapa.
 - **Edição/alteração em massa**: não implementada nesta etapa (o pedido
   original já pedia para só "preparar a arquitetura" se não houvesse
   necessidade imediata). A base já está pronta para isso — os RPCs de
@@ -190,12 +193,77 @@ sozinho.
 
 A tabela de clientes agora é paginada/filtrada/ordenada **no banco**
 (PostgREST), mas os KPIs e o ranking de gestores continuam agregando sobre a
-lista completa de clientes ativos, carregada de uma vez. Isso é intencional,
-não uma inconsistência: KPIs precisam refletir o **total real** da carteira
-(não faria sentido um "Total de clientes" que muda dependendo do filtro da
-tabela abaixo dele), e o teto de 200 clientes ativos (regra já existente em
-`demo_incluir_cliente`) torna esse carregamento completo barato. Se esse
-teto crescer muito no futuro, o próximo passo natural é mover essa agregação
-para uma função SQL (`select count(*) ... group by`) em vez de somar em
-JavaScript — documentado aqui como o gatilho que justificaria essa mudança,
-não implementado agora porque o teto atual não pede por ela.
+lista completa de clientes ativos, carregada de uma vez (agora paginada por
+`.range()` em lotes de 1000, via `buscarTudoPaginado` — ver §8). Isso é
+intencional, não uma inconsistência: KPIs precisam refletir o **total real**
+da carteira (não faria sentido um "Total de clientes" que muda dependendo do
+filtro da tabela abaixo dele). Com 2.500+ clientes (pós-unificação, §8) isso
+já não é tão barato quanto era com o teto de 200 da Etapa 2 — se a base
+crescer muito mais, o próximo passo natural é mover essa agregação para uma
+função SQL (`select count(*) ... group by`) em vez de somar em JavaScript —
+documentado aqui como o gatilho que justificaria essa mudança, não
+implementado agora porque o volume atual ainda é tratável no navegador.
+
+## 8. ETAPA 2.5 — Unificação de base (Dashboard + Cadastro)
+
+Depois da Etapa 2, o Juan pediu para que uma inclusão feita no Cadastro
+atualizasse também os números do Dashboard — hoje eles liam de bancos
+diferentes (Dashboard = `web/data/clientes.json`, estático, gerado pelo
+pipeline Python/SQL; Cadastro = Supabase, sandbox pequeno e descartável).
+
+**O que mudou, concretamente:**
+
+1. **Seed**: os 2.500 clientes sintéticos entraram na base do Cadastro como
+   carga inicial. `supabase/gerar_seed_unificacao.py` lê
+   `data/reports/dados_cliente.csv` (já com status/PJ Distinto/inconsistência
+   calculados pelo pipeline original) + `data/raw/clientes.csv` (data de
+   cadastro), gera UUIDs próprios, e produz
+   `supabase/seed_unificacao_2500_clientes.sql`. Não foi preciso mapear
+   gestores — `generate_synthetic_data.py` e `demo_gestores` já usam,
+   coincidentemente, os mesmos 16 nomes/verticais na mesma ordem
+   (`gestor_id` bate 1:1).
+2. **Atendimentos sintetizados, não replicados**: o modelo de `demo_atendimentos`
+   (por Centro de Custo) é mais simples que o do pipeline original (por
+   Plano). Em vez de tentar replicar plano a plano, o script sintetiza o
+   *menor* conjunto de linhas que reproduz o mesmo resultado agregado
+   (status, PJ Distinto, presença de inconsistência) — validado contra o
+   dataset real: nenhum cliente tem mais de 1 plano concluído nem mais de 1
+   inconsistente, e os dois nunca coexistem no mesmo cliente, o que cobre os
+   4 casos reais (Concluinte / Participante+inconsistente / Participante /
+   Sem atendimento) com folga dentro dos 4 Centros de Custo disponíveis.
+3. **Removidas as salvaguardas de sandbox descartável** (`supabase/schema_demo_v3_unificacao.sql`):
+   o teto de 200 clientes ativos em `demo_incluir_cliente` e a limpeza
+   automática diária (pg_cron) que apagava tudo com mais de 24h — ambas
+   incompatíveis com a base virar permanente.
+4. **`assets/app.js` deixou de ler JSON estático**: passou a consultar
+   `v_demo_clientes_completo` e `demo_log` ao vivo, com `.select()` aliasado
+   (`cliente_id:id`, `pj_distinto_oficial:pj_distinto`,
+   `qtd_planos_inconsistentes:qtd_inconsistencias`) para que toda a lógica de
+   agregação/filtro/gráfico já existente (testada, funcionando) continuasse
+   sem alteração — só a fonte dos dados mudou. `export_web_data.py` e
+   `web/data/*.json` continuam existindo (demonstram a camada Python/Pandas
+   do pipeline), mas não são mais lidos pelo site publicado.
+5. **Um só cliente Supabase**: `SUPABASE_URL`/`SUPABASE_ANON_KEY`/`sb` agora
+   são declarados uma vez em `assets/app.js` (que carrega primeiro) e
+   reaproveitados por `assets/supabase-demo.js`, em vez de cada arquivo criar
+   o seu.
+6. **Risco de truncamento silencioso**: com 2.500+ linhas, qualquer `.select()`
+   sem `.range()` pode ser cortado pelo teto de linhas do PostgREST sem erro
+   visível. `buscarTudoPaginado` (`assets/app.js`) resolve isso com um loop de
+   `.range()` em lotes de 1000 até uma página vir incompleta — usado pelo
+   carregamento do Dashboard, pelo carregamento completo do Cadastro
+   (KPIs/ranking/datalists) e pela exportação sem filtro.
+
+**Implicação de segurança (decisão consciente, não um descuido)**: sem as
+salvaguardas do item 3 e sem autenticação real (limitação já conhecida, ver
+§6), a base fica **permanentemente editável por qualquer visitante do site**,
+sem reset automático. O versionamento (`demo_clientes_versoes`) permite
+**auditar e reverter** uma alteração indevida, mas não a **impede** — a única
+proteção de escrita continua sendo a regra de permissão por vertical. O Juan
+confirmou explicitamente que aceita esse risco nesta fase ("dados de
+teste/demonstração mesmo, ajusto segurança depois se precisar").
+
+**Idempotência do seed**: `seed_unificacao_2500_clientes.sql` usa UUIDs fixos
+gerados no momento em que o script Python roda — rodá-lo mais de uma vez cria
+clientes duplicados (não há `unique` em CNPJ, de propósito, ver
+`docs/OPERACAO_CADASTRO.md` §8). Deve rodar **uma única vez** por ambiente.

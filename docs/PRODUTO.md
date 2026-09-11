@@ -80,27 +80,32 @@ economia comprovada.
 
 ## 7. Arquitetura da aplicação web (`web/`)
 
-- `index.html` — página única, com a landing (hero/narrativa de produto),
-  o dashboard consolidado (KPIs, gráficos, ranking de gestores) sobre os
-  2.500 clientes sintéticos do pipeline SQL/Python, e o **Cadastro**
-  (`#cadastro`), que opera sobre um banco Postgres real (Supabase) separado.
-- `assets/app.js` — dashboard estático: carrega `data/*.json` (gerados por
-  `export_web_data.py` a partir de `data/reports/*.csv`), agrega e renderiza
-  KPIs/gráficos/tabela/ranking, aplica os filtros globais.
-- `assets/supabase-demo.js` — Cadastro: todas as chamadas ao Supabase
-  (`v_demo_clientes_completo`, RPCs de incluir/editar/excluir/definir
+- `index.html` — página única, com a landing (hero/narrativa de produto), o
+  dashboard consolidado (KPIs, gráficos, ranking de gestores) e o
+  **Cadastro** (`#cadastro`) — desde a Etapa 2.5, os dois leem e escrevem a
+  **mesma base real** (Supabase/Postgres), ao vivo.
+- `assets/app.js` — Dashboard: consulta `v_demo_clientes_completo` e
+  `demo_log` ao vivo (via Supabase), agrega e renderiza KPIs/gráficos/
+  tabela/ranking, aplica os filtros globais. Não escreve nada — só lê.
+- `assets/supabase-demo.js` — Cadastro: todas as chamadas de escrita ao
+  Supabase (RPCs de incluir/editar/excluir/reatribuir/restaurar/definir
   atendimento). Nenhuma regra de permissão ou de classificação de cliente
   mora neste arquivo — a fonte de verdade é o banco (ver
-  `supabase/schema_demo.sql`), este arquivo só lê e apresenta.
+  `supabase/schema_demo*.sql`), este arquivo só lê e apresenta.
 - `assets/style.css` — design system único (tokens de cor/tipografia/raio),
   reaproveitado por ambas as camadas acima.
 
-Os dois conjuntos de dados (dataset estático de 2.500 clientes vs. Cadastro
-no Supabase) são propositalmente independentes — o primeiro demonstra a
-camada SQL + Python + Power BI do case técnico; o segundo é a superfície de
-produto que qualquer visitante pode operar ao vivo. O texto da seção
-"Dataset" e do "Cadastro" explicita essa diferença para não confundir o
-usuário sobre "por que existem duas listas de clientes".
+**Histórico da decisão** (ver `docs/AUDITORIA_E_VERSIONAMENTO.md` para o
+detalhamento completo): até a Etapa 2, o dataset de 2.500 clientes
+(estático, gerado pelo pipeline SQL/Python) e o Cadastro (Supabase, sandbox
+descartável com teto de 200 clientes e limpeza automática de 24h) eram
+intencionalmente independentes. Na Etapa 2.5, a pedido explícito, isso
+mudou: os 2.500 clientes viraram a carga inicial da base do Cadastro
+(`supabase/gerar_seed_unificacao.py`), o Dashboard passou a consultar essa
+mesma base ao vivo em vez de um JSON estático, e as salvaguardas de sandbox
+descartável (teto de clientes, limpeza automática) foram removidas — com a
+implicação de segurança explícita de que, sem autenticação real, a base fica
+permanentemente editável por qualquer visitante do site.
 
 ## 8. Fluxo principal do usuário
 
@@ -116,9 +121,11 @@ usuário sobre "por que existem duas listas de clientes".
    razão social/CNPJ, inclui um cliente pelo formulário, e acompanha a
    atividade recente — tudo atualizado automaticamente após qualquer
    escrita, sem F5.
-5. Pode ainda navegar ao Dashboard consolidado (KPIs sobre os 2.500 clientes
-   sintéticos, com filtros globais, drill-down por gestor/vertical) e à Base
-   de clientes (dataset somente leitura).
+5. Pode ainda navegar ao Dashboard consolidado (KPIs sobre a carteira
+   completa — hoje os 2.500 clientes sintéticos do pipeline mais qualquer
+   inclusão feita ao vivo pelo Cadastro —, com filtros globais, drill-down
+   por gestor/vertical) e à Base de clientes (mesma base, visão somente
+   leitura com busca/paginação).
 
 ## 9. Funcionalidades já existentes (não inventadas para o marketing)
 
@@ -137,11 +144,10 @@ usuário sobre "por que existem duas listas de clientes".
 
 ## 10. Decisões de UX desta etapa
 
-- **Uma fonte de verdade por seção, mas duas seções**: o dataset estático
-  (case técnico) e o Cadastro (produto ao vivo) continuam sendo bancos de
-  dados diferentes — decisão consciente para não misturar a demonstração do
-  pipeline SQL/Python com o produto operável. O texto de cada seção agora
-  deixa essa diferença explícita.
+- ~~Uma fonte de verdade por seção, mas duas seções~~ — **superada na Etapa
+  2.5**: Dashboard e Cadastro passaram a ler a mesma base ao vivo, a pedido
+  explícito (ver `docs/AUDITORIA_E_VERSIONAMENTO.md`). Mantido aqui como
+  registro histórico da decisão original da Etapa 1.
 - **Um único CTA visualmente dominante** ("Abrir Cadastro", no header e ao
   fim da landing) — o link para o GitHub foi rebaixado a um link de texto
   discreto, para não competir com a ação principal.

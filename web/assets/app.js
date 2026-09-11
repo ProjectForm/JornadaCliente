@@ -2,15 +2,36 @@
 // Ver powerbi/modelo_de_dados_e_dax.md -> secao "Publicar na Web".
 const POWERBI_EMBED_URL = "";
 
+// ETAPA 2.5 -- UNIFICACAO DE BASE: o Dashboard deixou de ler um JSON estatico
+// (web/data/clientes.json) e passa a consultar o Supabase ao vivo -- a MESMA
+// base que o Cadastro (assets/supabase-demo.js) le e escreve. Cliente
+// definido aqui (nao em supabase-demo.js) porque este arquivo carrega
+// primeiro -- supabase-demo.js reaproveita esta mesma instancia (nao cria a
+// sua). Ver docs/AUDITORIA_E_VERSIONAMENTO.md para a decisao e as
+// implicacoes de seguranca de nao ter mais teto/autolimpeza no banco.
+const SUPABASE_URL = "https://mmzotwqobbpuahjhulom.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_3n7XKPYyCEZSKybccTYF5g_hfwdllVX";
+let sb = typeof supabase !== "undefined" ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
 const fmtInt = (n) => new Intl.NumberFormat("pt-BR").format(n);
 const fmtPct = (n) => (n === null || n === undefined ? "--" : `${n.toString().replace(".", ",")}%`);
 const prefersReducedMotion = () =>
   window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-async function carregarJSON(caminho) {
-  const resp = await fetch(caminho);
-  if (!resp.ok) throw new Error(`Falha ao carregar ${caminho}: ${resp.status}`);
-  return resp.json();
+// Busca TODOS os registros de uma tabela/view, paginando com .range() --
+// nunca confia que uma unica chamada sem limite traga tudo (o PostgREST tem
+// um teto de linhas por resposta configuravel no projeto Supabase).
+async function buscarTudoPaginado(query, { pagina = 1000 } = {}) {
+  let offset = 0;
+  let tudo = [];
+  for (;;) {
+    const { data, error } = await query().range(offset, offset + pagina - 1);
+    if (error) throw error;
+    tudo = tudo.concat(data);
+    if (!data.length || data.length < pagina) break;
+    offset += pagina;
+  }
+  return tudo;
 }
 
 /* ============================================================================
@@ -118,11 +139,6 @@ const dashState = {
 const tabelaState = { filtrados: [], pagina: 1 };
 
 function round1(n) { return Math.round(n * 10) / 10; }
-
-function converterClientesColunar(payload) {
-  const { colunas, linhas } = payload;
-  return linhas.map((linha) => Object.fromEntries(colunas.map((col, i) => [col, linha[i]])));
-}
 
 function normalizarCliente(c) {
   return {
@@ -375,10 +391,11 @@ function montarTabelaGestores(dados) {
 }
 
 /* ============================================================================
-   AUDITORIA (timeline) -- trilha do pipeline principal, nao reage a filtros
-   (e um log de sistema, nao uma visao de carteira)
+   AUDITORIA (timeline) -- le demo_log ao vivo (mesma tabela que o Cadastro
+   escreve -- ver assets/supabase-demo.js). Nao reage aos filtros do
+   dashboard (e um log de sistema, nao uma visao de carteira).
    ============================================================================ */
-function montarLog(logAlteracoes) {
+function montarLog(logAlteracoes, gestoresPorIdDash) {
   const container = document.getElementById("table-log");
   const emptyState = document.getElementById("log-empty");
 
@@ -390,20 +407,21 @@ function montarLog(logAlteracoes) {
   container.hidden = false;
   emptyState.hidden = true;
 
-  const rotulo = { INSERT: "incluiu", UPDATE: "editou", DELETE: "excluiu" };
-  const classeDot = { INSERT: "insert", UPDATE: "update", DELETE: "delete" };
+  const rotulo = { INSERT: "incluiu", UPDATE: "editou", DELETE: "excluiu", ATENDIMENTO: "atualizou atendimento de", IMPORT: "importou", RESTORE: "restaurou versao de" };
+  const classeDot = { INSERT: "insert", UPDATE: "update", DELETE: "delete", ATENDIMENTO: "update", IMPORT: "insert", RESTORE: "update" };
 
   container.innerHTML = logAlteracoes.map((l) => {
     const acao = rotulo[l.operacao] || l.operacao;
+    const nomeGestor = gestoresPorIdDash.get(l.gestor_operador_id) || `#${l.gestor_operador_id}`;
     const detalhe = l.campo
-      ? ` &middot; <strong>${l.campo}</strong>${l.valor_antigo ? `: ${l.valor_antigo} &rarr; ${l.valor_novo}` : ""}`
+      ? ` &middot; <strong>${l.campo}</strong>${l.valor_novo ? `: ${l.valor_antigo ? `${l.valor_antigo} &rarr; ` : ""}${l.valor_novo}` : ""}`
       : "";
     return `
       <div class="timeline-item">
-        <span class="timeline-when">${l.timestamp}</span>
+        <span class="timeline-when">${new Date(l.criado_em).toLocaleString("pt-BR")}</span>
         <span class="timeline-dot-col"><span class="timeline-dot ${classeDot[l.operacao] || ""}"></span></span>
         <span class="timeline-body">
-          Gestor <strong>#${l.gestor_id_operador}</strong> ${acao} o registro <strong>#${l.registro_id}</strong> em <strong>${l.tabela}</strong>${detalhe}
+          Gestor <strong>${nomeGestor}</strong> ${acao} um cliente${detalhe}
         </span>
       </div>
     `;
@@ -817,17 +835,31 @@ function montarPowerBI() {
 }
 
 /* ============================================================================
-   INIT
+   INIT -- carrega a base ao vivo do Supabase (mesma que o Cadastro escreve).
+   Ver docs/AUDITORIA_E_VERSIONAMENTO.md, secao de unificacao (ETAPA 2.5).
    ============================================================================ */
 async function init() {
   wireInteracoesDashboard();
   try {
-    const [logAlteracoes, clientesPayload] = await Promise.all([
-      carregarJSON("data/log_alteracoes.json"),
-      carregarJSON("data/clientes.json"),
+    if (!sb) throw new Error("Biblioteca do Supabase nao carregou.");
+
+    const gestoresRes = await sb.from("demo_gestores").select("*");
+    if (gestoresRes.error) throw gestoresRes.error;
+    const gestoresPorIdDash = new Map(gestoresRes.data.map((g) => [g.gestor_id, g.nome]));
+
+    const [clientes, logAlteracoes] = await Promise.all([
+      buscarTudoPaginado(() => sb.from("v_demo_clientes_completo")
+        .select("cliente_id:id, razao_social, cnpj, porte, gestor_id, gestor, vertical, municipio, status, "
+          + "pj_distinto_oficial:pj_distinto, qtd_planos_inconsistentes:qtd_inconsistencias, respondeu, aumento_faturamento_pct")
+        .order("criado_em", { ascending: true })),
+      sb.from("demo_log").select("*").order("criado_em", { ascending: false }).limit(200).then(({ data, error }) => {
+        if (error) throw error;
+        return data;
+      }),
     ]);
-    dashState.todos = converterClientesColunar(clientesPayload).map(normalizarCliente);
-    montarLog(logAlteracoes);
+
+    dashState.todos = clientes.map(normalizarCliente);
+    montarLog(logAlteracoes, gestoresPorIdDash);
     construirFiltroBar(dashState.todos);
     document.getElementById("filter-bar").dataset.state = "ready";
     renderTudo(dashState.todos);

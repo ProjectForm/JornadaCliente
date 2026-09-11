@@ -195,7 +195,7 @@
         </p>
         <h3>Base de clientes</h3>
         <p class="dataset-count" id="dataset-count">2.500 clientes</p>
-        <p class="card-sub">Os 2500 clientes sint&eacute;ticos gerados pelo pipeline SQL + Python &mdash; base somente leitura, usa os filtros acima, mais busca e pagina&ccedil;&atilde;o aqui (clique numa linha para ver o detalhe). Para incluir, editar ou excluir um cliente, use o <a href="#cadastro" style="color:var(--ink-0)">Cadastro</a>.</p>
+        <p class="card-sub">Os clientes da carteira, ao vivo do banco (Supabase) &mdash; mesma base do Cadastro. Vis&atilde;o somente leitura aqui, usa os filtros acima, mais busca e pagina&ccedil;&atilde;o (clique numa linha para ver o detalhe). Para incluir, editar ou excluir um cliente, use o <a href="#cadastro" style="color:var(--ink-0)">Cadastro</a>.</p>
       </div>
       <div class="filters-row">
         <input type="search" id="clientes-busca" placeholder="Buscar por razao social ou CNPJ..." class="input-search">
@@ -338,10 +338,11 @@
         </div>
         <p class="card-sub">
           A partir daqui voc&ecirc; consulta a carteira, inclui e atualiza clientes, e acompanha a jornada em
-          tempo real. Banco Postgres real (Supabase), separado do dataset de 2.500 clientes acima. As regras de
-          permiss&atilde;o por vertical (mesma l&oacute;gica de <code>permissoes.py</code>) e a regra de
-          conclus&atilde;o (mesma de <code>sql/queries.sql</code>) s&atilde;o calculadas no banco, nunca no navegador.
-          Qualquer inclus&atilde;o/edi&ccedil;&atilde;o/exclus&atilde;o atualiza tudo abaixo automaticamente.
+          tempo real. Banco Postgres real (Supabase) &mdash; a mesma base que o Dashboard mostra acima: qualquer
+          inclus&atilde;o/edi&ccedil;&atilde;o/exclus&atilde;o feita aqui atualiza KPIs, gr&aacute;ficos e a Base de
+          clientes automaticamente. As regras de permiss&atilde;o por vertical (mesma l&oacute;gica de
+          <code>permissoes.py</code>) e a regra de conclus&atilde;o (mesma de <code>sql/queries.sql</code>) s&atilde;o
+          calculadas no banco, nunca no navegador.
         </p>
         <div class="sync-row">
           <span class="sync-status" id="sandbox-sync-status" data-state="idle">

@@ -70,16 +70,21 @@ Vercel, deploy automático a cada push no repositório). Ver
 problema, proposta de valor, decisões de UX); aqui o resumo técnico:
 
 - **Painel de KPIs** e gráficos (PJ Distintos por vertical, status,
-  ranking de gestores) — estáticos, gerados por `export_web_data.py` a partir
-  de `data/reports/*.csv`.
-- **Base de clientes** navegável (busca, filtro por vertical/gestor/status,
-  paginação) com os 2500 clientes sintéticos.
-- **Cadastro** — área de operação ao vivo, banco Postgres real (Supabase),
-  separado do dataset acima, onde qualquer visitante testa incluir/editar/
-  excluir cliente e vê a regra de permissão por vertical bloqueando edição
-  entre gestores de verticais diferentes, na prática. Schema, RLS e as
-  funções que replicam `permissoes.py` em PL/pgSQL ficam em
-  `supabase/schema_demo.sql`.
+  ranking de gestores), **Base de clientes** navegável (busca, filtro,
+  paginação) e **Cadastro** (inclusão/edição/exclusão) lendo e escrevendo,
+  ao vivo, a **mesma base real** (Supabase/Postgres) — desde a Etapa 2.5
+  (unificação de base, ver `docs/AUDITORIA_E_VERSIONAMENTO.md`). Os 2500
+  clientes sintéticos gerados pelo pipeline SQL+Python foram carregados como
+  carga inicial dessa base (`supabase/gerar_seed_unificacao.py` a partir de
+  `data/reports/*.csv`) — qualquer visitante que inclui/edita um cliente pelo
+  Cadastro vê o Dashboard atualizar na hora, sem novo deploy, e vê a regra de
+  permissão por vertical bloqueando edição entre gestores de verticais
+  diferentes, na prática. Schema, RLS, funções (inclui histórico,
+  versionamento e restauração) e as que replicam `permissoes.py` em PL/pgSQL
+  ficam em `supabase/schema_demo*.sql`. `export_web_data.py` continua
+  gerando `web/data/*.json` a partir de `data/reports/*.csv` (demonstra a
+  camada Python/Pandas do pipeline), mas o site publicado não lê mais esses
+  arquivos — lê o Supabase diretamente.
 - **Relatório Power BI** publicado embutido (quando o link de "Publicar na
   Web" estiver preenchido — ver `powerbi/modelo_de_dados_e_dax.md`, seção 7).
 
@@ -144,11 +149,15 @@ reflect the change.
 [jornada-clienteweb.vercel.app](https://jornada-clienteweb.vercel.app) —
 no local setup needed, auto-deployed on every push. See `docs/PRODUTO.md`
 (Portuguese) for the full product positioning. KPIs/charts, a
-searchable/filterable browser over the 2500 synthetic clients, and a live
-**Cadastro** (registration/operation area — real Postgres via Supabase,
-RLS + PL/pgSQL functions mirroring `permissoes.py`) where anyone can try
-including/editing a client and see the vertical-permission rule block a
-cross-vertical edit in real time (`supabase/schema_demo.sql`).
+searchable/filterable browser over the client base, and a live **Cadastro**
+(registration/operation area) all read and write the **same real database**
+(Postgres via Supabase, RLS + PL/pgSQL functions mirroring `permissoes.py`,
+including history/versioning/restore) — the 2500 synthetic clients from the
+SQL+Python pipeline were loaded as that database's initial seed
+(`supabase/gerar_seed_unificacao.py`), so anyone can include/edit a client
+through the Cadastro and watch the Dashboard update live, and see the
+vertical-permission rule block a cross-vertical edit in real time
+(`supabase/schema_demo.sql`).
 
 Run:
 ```bash

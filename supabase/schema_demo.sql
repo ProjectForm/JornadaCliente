@@ -22,22 +22,26 @@
 --
 -- Este calculo mora SÓ nesta view -- nenhum arquivo JS reimplementa a regra.
 --
--- Este banco continua SEPARADO do dataset sintetico principal (2500
--- clientes, gerado por generate_synthetic_data.py/etl_pipeline.py). O
--- sandbox agora e a "fonte de verdade" apenas do seu proprio universo de
--- demonstracao (ate 200 clientes ativos), nao do portfolio de 2500.
+-- ETAPA 2.5 -- UNIFICACAO DE BASE: este banco DEIXOU de ser separado do
+-- dataset sintetico principal. Os mesmos 2500 clientes gerados por
+-- generate_synthetic_data.py/etl_pipeline.py sao a carga inicial deste banco
+-- (ver supabase/seed_unificacao_2500_clientes.sql) -- Dashboard (web/assets/app.js)
+-- e Cadastro (web/assets/supabase-demo.js) leem AMBOS de v_demo_clientes_completo,
+-- ao vivo. Sem teto de clientes ativos e sem limpeza automatica (eram
+-- salvaguardas de sandbox descartavel, incompativeis com ser a base real) --
+-- ver docs/AUDITORIA_E_VERSIONAMENTO.md para a decisao e as implicacoes de
+-- seguranca.
 --
 -- Como aplicar: Dashboard do Supabase -> SQL Editor -> New query -> colar
--- este arquivo inteiro -> Run. ATENCAO: isto reseta o Cadastro (DROP TABLE) --
--- os clientes de teste incluidos ate agora serao apagados. E esperado, ja
--- que e um ambiente de demonstracao, nao dado real.
+-- este arquivo inteiro -> Run. ATENCAO: isto reseta a base (DROP TABLE) --
+-- todo o conteudo atual (incluindo os 2500 clientes, se ja tiverem sido
+-- carregados) sera apagado; rode o seed de novo depois.
 --
--- Este arquivo e o schema "do zero" (reset completo). Se o Cadastro ja
--- estiver rodando com dados que voce quer preservar, use em vez disso
--- supabase/schema_demo_v2_operacao.sql, que aplica exatamente as mesmas
--- mudancas de forma aditiva (sem apagar nada). Os dois arquivos convergem
--- para o mesmo schema final -- ETAPA 2: governanca (historico, versionamento,
--- restauracao, reatribuicao de gestor) sobre a base da ETAPA 1.
+-- Este arquivo e o schema "do zero" (reset completo). Se a base ja estiver
+-- rodando com dados que voce quer preservar, use em vez disso
+-- supabase/schema_demo_v2_operacao.sql + supabase/schema_demo_v3_unificacao.sql,
+-- que aplicam exatamente as mesmas mudancas de forma aditiva (sem apagar
+-- nada). Os arquivos convergem para o mesmo schema final.
 -- ============================================================================
 
 create extension if not exists pgcrypto;
@@ -281,7 +285,6 @@ create or replace function demo_incluir_cliente(
 language plpgsql security definer set search_path = public as $$
 declare
   v_id uuid;
-  v_total int;
 begin
   if not exists (select 1 from demo_gestores where gestor_id = p_gestor_id) then
     raise exception 'Gestor % nao encontrado', p_gestor_id;
@@ -291,11 +294,6 @@ begin
   end if;
   if length(trim(p_razao_social)) = 0 then
     raise exception 'Razao social obrigatoria';
-  end if;
-
-  select count(*) into v_total from demo_clientes where ativo = true;
-  if v_total >= 200 then
-    raise exception 'Cadastro cheio no momento (limite de demonstracao). Tente novamente mais tarde.';
   end if;
 
   insert into demo_clientes (
@@ -632,14 +630,10 @@ grant execute on function demo_excluir_cliente(uuid, int) to anon, authenticated
 grant execute on function demo_reatribuir_gestor(uuid, int, int) to anon, authenticated;
 grant execute on function demo_restaurar_versao_cliente(bigint, int) to anon, authenticated;
 
--- Autolimpeza diaria (opcional). Se a extensao pg_cron nao estiver
--- disponivel no seu projeto, estas duas ultimas instrucoes vao falhar --
--- pode ignorar o erro, o resto do script ja funciona sem isso.
-create extension if not exists pg_cron with schema extensions;
-select cron.schedule(
-  'limpar_sandbox_demo',
-  '0 3 * * *',
-  $$delete from demo_clientes_versoes where criado_em < now() - interval '24 hours';
-    delete from demo_log where criado_em < now() - interval '24 hours';
-    delete from demo_clientes where criado_em < now() - interval '24 hours';$$
-);
+-- Sem autolimpeza automatica e sem teto de clientes ativos (ETAPA 2.5 --
+-- unificacao de base, ver supabase/schema_demo_v3_unificacao.sql): o
+-- Cadastro deixou de ser um sandbox descartavel e passa a ser a mesma base
+-- que o Dashboard le ao vivo (carga inicial: supabase/seed_unificacao_2500_clientes.sql).
+-- Isso significa que, sem autenticacao real, a base fica permanentemente
+-- editavel por qualquer visitante -- decisao consciente, ver
+-- docs/AUDITORIA_E_VERSIONAMENTO.md.

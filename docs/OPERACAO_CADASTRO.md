@@ -8,7 +8,7 @@
 > Para a arquitetura de auditoria/versionamento em detalhe, ver
 > `docs/AUDITORIA_E_VERSIONAMENTO.md`.
 
-## ⚠️ Passo obrigatório antes de tudo: rodar a migração no Supabase
+## ⚠️ Passo obrigatório antes de tudo: rodar as migrações no Supabase
 
 Esta etapa criou `supabase/schema_demo_v2_operacao.sql` — uma migração **aditiva**
 (não apaga clientes/gestores/atendimentos/log existentes) que precisa ser
@@ -17,6 +17,13 @@ rodada manualmente no projeto Supabase real:
 1. Dashboard do Supabase → SQL Editor → New query.
 2. Colar o conteúdo inteiro de `supabase/schema_demo_v2_operacao.sql`.
 3. Run.
+
+**Etapa 2.5 (unificação de base — ver `docs/AUDITORIA_E_VERSIONAMENTO.md`):**
+depois da migração acima, rode também, nesta ordem, `supabase/schema_demo_v3_unificacao.sql`
+e `supabase/seed_unificacao_2500_clientes.sql` (gerado por
+`supabase/gerar_seed_unificacao.py`) — sem eles, o Dashboard não encontra os
+2.500 clientes sintéticos na base do Cadastro, e as duas telas ficam
+mostrando bases diferentes de novo.
 
 Sem isso, o Cadastro publicado continua funcionando (inclusão/edição/exclusão
 básicas), mas **histórico por cliente, versionamento, restauração e
@@ -206,13 +213,16 @@ etapa — ver limitações em `docs/AUDITORIA_E_VERSIONAMENTO.md`.
 
 ## 11. Performance
 
-Com o teto de 200 clientes ativos (regra já existente em
-`demo_incluir_cliente`), índices têm impacto real pequeno hoje, mas foram
-criados mesmo assim (`gestor_id`, `cnpj`, `lower(razao_social)`,
+Desde a Etapa 2.5 (unificação de base), a base tem 2.500+ clientes, não mais
+até 200 — os índices (`gestor_id`, `cnpj`, `lower(razao_social)`,
 `demo_log(cliente_id, criado_em)`, `demo_clientes_versoes(cliente_id,
-versao)`) — arquitetura preparada para crescer. Filtro/busca/ordenação
-acontecem no banco (nunca em milhares de linhas no navegador); a tabela
-principal só carrega a página atual (20 linhas); KPIs/ranking seguem
-carregando a base completa (barato, dado o teto de 200 linhas) — ver
-`docs/AUDITORIA_E_VERSIONAMENTO.md` para a discussão completa desse
-trade-off.
+versao)`) deixaram de ser "preparação para o futuro" e passaram a ter
+impacto real agora. Filtro/busca/ordenação acontecem no banco (nunca em
+milhares de linhas no navegador, via `.eq/.in/.ilike/.order/.range`); a
+tabela principal só carrega a página atual (20 linhas). Todo fetch "sem
+filtro" (KPIs/ranking do Cadastro, o Dashboard inteiro, exportação sem
+filtro) usa paginação por `.range()` em lotes de 1000 (`buscarTudoPaginado`
+em `assets/app.js`) para nunca truncar silenciosamente no teto de linhas do
+PostgREST — ver `docs/AUDITORIA_E_VERSIONAMENTO.md` para o trade-off de
+KPIs/ranking ainda agregarem em JavaScript sobre a lista completa (em vez de
+uma função SQL de agregação), e para quando isso deixa de valer a pena.

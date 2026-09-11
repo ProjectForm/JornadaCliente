@@ -31,12 +31,20 @@ ser 100% público e sintético.
    alteração é registrada em `log_alteracoes` (auditoria)
 8. `powerbi/modelo_de_dados_e_dax.md` — documentação do modelo de dados e medidas DAX (não há .pbix no repo — Power BI Desktop não roda neste ambiente)
 9. `tests/test_pipeline.py` — pytest cobrindo a regra de negócio (classificação/inconsistência) e o mock de CNPJ
-10. `export_web_data.py` + `web/` — dashboard estático publicado (Vercel,
-    `jornada-cliente-dashboard`), sem dependência de Python no visitante:
-    KPIs/gráficos a partir de `data/reports/*.csv`, base de clientes navegável,
-    e um sandbox de inclusão ao vivo em banco real (Supabase/Postgres,
-    separado do dataset principal) cujo schema/RLS/funções ficam em
-    `supabase/schema_demo.sql` (replica `permissoes.py` em PL/pgSQL)
+10. `export_web_data.py` + `web/` — site publicado (Vercel, "Planilha de
+    Controle — Jornada do Cliente"). Desde a Etapa 2.5 (unificação de base,
+    ver `docs/AUDITORIA_E_VERSIONAMENTO.md`), Dashboard e Cadastro leem AO
+    VIVO da mesma base real (Supabase/Postgres): os 2500 clientes sintéticos
+    do pipeline foram carregados como carga inicial em `demo_clientes`
+    (`supabase/seed_unificacao_2500_clientes.sql`, gerado por
+    `supabase/gerar_seed_unificacao.py` a partir de `data/reports/*.csv`), e
+    qualquer inclusão/edição/exclusão feita no Cadastro passa a valer para o
+    Dashboard também, sem novo deploy. Schema/RLS/funções (inclui histórico,
+    versionamento e restauração) ficam em `supabase/schema_demo*.sql`
+    (replica `permissoes.py` em PL/pgSQL). `export_web_data.py` e os JSONs
+    em `web/data/` não são mais lidos pelo site publicado — ficam como
+    artefato do pipeline (ainda regeneráveis, ainda demonstram a camada
+    SQL+Python+Pandas), não como fonte de dados do site.
 
 ## Fluxo de trabalho
 

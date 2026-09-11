@@ -14,13 +14,21 @@
 // consulta dedicada contra a view (filtros/busca/ordenacao/paginacao=
 // .eq/.in/.ilike/.order/.range do PostgREST) -- o resultado exportado ou
 // mostrado e sempre o resultado real da consulta, nunca um reordenamento
-// visual. KPIs/ranking continuam agregados sobre a lista completa (o teto de
-// 200 clientes ativos torna isso barato) -- ver carregarSandboxCompleto().
+// visual.
 //
-// A anon key abaixo e destinada a ficar publica no cliente -- a seguranca
-// mora nas policies de RLS e nas funcoes SECURITY DEFINER do banco.
-const SUPABASE_URL = "https://mmzotwqobbpuahjhulom.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_3n7XKPYyCEZSKybccTYF5g_hfwdllVX";
+// ETAPA 2.5 -- UNIFICACAO DE BASE: esta e a MESMA base que o Dashboard le
+// (assets/app.js) -- ja nao ha teto de clientes ativos nem autolimpeza (ver
+// docs/AUDITORIA_E_VERSIONAMENTO.md). KPIs/ranking aqui no Cadastro
+// continuam agregando sobre a lista completa carregada uma vez
+// (carregarSandboxCompleto()) -- com 2500+ clientes isso ja nao e tao barato
+// quanto era com o teto de 200; se a base crescer muito mais, o proximo
+// passo natural e mover essa agregacao para uma funcao SQL (ver nota em
+// docs/AUDITORIA_E_VERSIONAMENTO.md).
+//
+// SUPABASE_URL/SUPABASE_ANON_KEY e o cliente `sb` sao declarados em
+// assets/app.js (que carrega primeiro) -- reaproveitados aqui, nao
+// recriados. A anon key e destinada a ficar publica no cliente -- a
+// seguranca mora nas policies de RLS e nas funcoes SECURITY DEFINER do banco.
 
 const CNPJ_LEN = 14;
 const RAZAO_MAX = 80;
@@ -56,7 +64,7 @@ const CRITERIOS_RANKING = {
   inconsistencias: { label: "Mais inconsistencias", calc: (r) => r.inconsistentes, fmt: (v) => fmtInt(v) },
 };
 
-let sb = null;
+// `sb` ja existe (declarado e criado em assets/app.js, que carrega primeiro).
 let gestoresPorId = new Map();
 let centrosCustoPorId = new Map();
 let sandboxClientes = []; // lista COMPLETA de clientes ativos -- alimenta KPIs, ranking, dedup, datalists
@@ -100,20 +108,22 @@ function debounce(fn, wait) {
    chamada e a leitura da view/RPC que ja fazem esse trabalho.
    ============================================================================ */
 async function carregarSandboxCompleto() {
-  const [gestoresRes, ccRes, clientesRes, logsRes] = await Promise.all([
+  const [gestoresRes, ccRes, clientes, logsRes] = await Promise.all([
     sb.from("demo_gestores").select("*").order("nome"),
     sb.from("demo_centros_custo").select("*").order("id"),
-    sb.from("v_demo_clientes_completo").select("*").order("criado_em", { ascending: false }),
+    // .select("*") sem paginacao truncaria silenciosamente no teto de linhas
+    // do PostgREST agora que a base e a mesma do Dashboard (2500+ clientes,
+    // nao mais ate 200) -- ver buscarTudoPaginado em assets/app.js.
+    buscarTudoPaginado(() => sb.from("v_demo_clientes_completo").select("*").order("criado_em", { ascending: false })),
     sb.from("demo_log").select("*").order("criado_em", { ascending: false }).limit(30),
   ]);
   if (gestoresRes.error) throw gestoresRes.error;
   if (ccRes.error) throw ccRes.error;
-  if (clientesRes.error) throw clientesRes.error;
   if (logsRes.error) throw logsRes.error;
 
   gestoresPorId = new Map(gestoresRes.data.map((g) => [g.gestor_id, g]));
   centrosCustoPorId = new Map(ccRes.data.map((c) => [c.id, c]));
-  sandboxClientes = clientesRes.data;
+  sandboxClientes = clientes;
   sandboxLogs = logsRes.data;
 
   const select = $("demo-gestor-atual");
@@ -379,8 +389,9 @@ function atualizarOperador() {
 /* ============================================================================
    AGREGACAO (KPIs/ranking) -- pura contagem/media sobre campos JA
    classificados pela view do banco. Roda sobre a lista COMPLETA de clientes
-   ativos (nunca sobre a pagina filtrada da tabela) -- o teto de 200 clientes
-   ativos do Cadastro torna isso barato; ver docs/OPERACAO_CADASTRO.md.
+   ativos (nunca sobre a pagina filtrada da tabela) -- ver
+   docs/AUDITORIA_E_VERSIONAMENTO.md para o trade-off disso com a base
+   unificada (2500+ clientes).
    ============================================================================ */
 function agregarResumoSandbox(clientes) {
   const total = clientes.length;
@@ -639,10 +650,11 @@ async function buscarPaginaCadastro() {
 }
 
 async function buscarTodosCadastroParaExportacao() {
-  const { data, error } = await construirQueryCadastro()
-    .order(cadastroOrdenarPor, { ascending: cadastroOrdemAsc, nullsFirst: false });
-  if (error) throw error;
-  return data || [];
+  // buscarTudoPaginado (assets/app.js) evita truncar silenciosamente no
+  // teto de linhas do PostgREST quando a exportacao nao tem filtro (base
+  // unificada, 2500+ clientes).
+  return buscarTudoPaginado(() =>
+    construirQueryCadastro().order(cadastroOrdenarPor, { ascending: cadastroOrdemAsc, nullsFirst: false }));
 }
 
 async function atualizarTabelaCadastro() {
@@ -1709,14 +1721,13 @@ function wireEstatico() {
 
 function initDemo() {
   wireEstatico();
-  if (typeof supabase === "undefined") {
+  if (!sb) {
     mostrarIndisponivel();
     setConnStatus("offline");
     setSyncStatus("error");
     toast("Biblioteca do Supabase nao carregou.", "error");
     return;
   }
-  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   tentarConectar();
 }
 
