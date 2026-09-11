@@ -34,6 +34,12 @@ deste ambiente — só quem tem a senha/dashboard do projeto pode rodar isso.
 
 ## 1. Filtros
 
+> **Etapa 3 (redesign visual)**: os grupos de filtro abaixo passaram a viver
+> dentro de um drawer lateral (gatilho `Filtros (N)` na barra de resultado),
+> em vez de uma faixa de chips sempre visível — ver `docs/DESIGN_FINAL.md`.
+> Nenhuma mudança de comportamento: os filtros continuam aplicando ao vivo,
+> combináveis, com a mesma lógica de estado descrita abaixo.
+
 Área "Filtros do Cadastro", com os mesmos padrões visuais dos filtros do
 Dashboard (chips + contagem + limpar):
 

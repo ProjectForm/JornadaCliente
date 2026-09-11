@@ -44,7 +44,10 @@ ser 100% público e sintético.
     (replica `permissoes.py` em PL/pgSQL). `export_web_data.py` e os JSONs
     em `web/data/` não são mais lidos pelo site publicado — ficam como
     artefato do pipeline (ainda regeneráveis, ainda demonstram a camada
-    SQL+Python+Pandas), não como fonte de dados do site.
+    SQL+Python+Pandas), não como fonte de dados do site. Etapa 3: redesenho
+    visual premium (paleta clara grafite/azul institucional, sidebar de
+    navegação, drawer de filtros, menu de ações) — ver `docs/DESIGN_FINAL.md`
+    e `docs/FINAL_REVIEW.md`; nenhuma lógica de dados foi alterada.
 
 ## Fluxo de trabalho
 

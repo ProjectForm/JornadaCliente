@@ -601,6 +601,8 @@ function renderizarFiltrosAtivosCadastro() {
   document.querySelectorAll("#cadastro-chips-extra .chip").forEach((el) => el.classList.toggle("is-active", cadastroFiltros[el.dataset.extra] === true));
 
   $("cadastro-filter-clear").hidden = !algumFiltroAtivoCadastro();
+  const badge = $("cadastro-filter-count-badge");
+  if (badge) { badge.hidden = !chips.length; badge.textContent = String(chips.length); }
 }
 
 function aplicarFiltrosCadastro() {
@@ -755,6 +757,35 @@ async function exportarCadastroXLSX() {
    RENDER: tabela de clientes do Cadastro (pagina atual, ja filtrada/ordenada
    no banco) e atividade recente
    ============================================================================ */
+/* Menu de acoes (...) por linha -- substitui a fileira de 4 botoes por um
+   unico gatilho + lista suspensa (delegacao de abrir/fechar em app.js). */
+function criarMenuAcoesCliente(c) {
+  const menu = document.createElement("div");
+  menu.className = "actions-menu";
+  const btn = document.createElement("button");
+  btn.type = "button"; btn.className = "actions-menu-btn";
+  btn.setAttribute("aria-haspopup", "true"); btn.setAttribute("aria-expanded", "false");
+  btn.setAttribute("aria-label", `Mais acoes para ${c.razao_social}`);
+  btn.textContent = "⋯";
+  const lista = document.createElement("div");
+  lista.className = "actions-menu-list"; lista.hidden = true; lista.setAttribute("role", "menu");
+  const item = (label, onClick, danger) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = danger ? "actions-menu-item danger" : "actions-menu-item";
+    b.setAttribute("role", "menuitem"); b.textContent = label;
+    b.addEventListener("click", () => { lista.hidden = true; btn.setAttribute("aria-expanded", "false"); onClick(); });
+    return b;
+  };
+  lista.append(
+    item("Ver historico", () => abrirModalHistorico(c)),
+    item("Atendimentos", () => abrirModalAtendimento(c)),
+    item("Editar", () => abrirModalEditar(c)),
+    item("Excluir", () => abrirModalExcluir(c), true),
+  );
+  menu.append(btn, lista);
+  return menu;
+}
+
 function montarClientesSandbox(clientes, highlightId) {
   const tbody = document.querySelector("#table-demo-clientes tbody");
   const emptyState = $("demo-clientes-empty");
@@ -781,7 +812,7 @@ function montarClientesSandbox(clientes, highlightId) {
     const tdPrioridade = document.createElement("td");
     if (c.prioritario) {
       const badgePrio = document.createElement("span");
-      badgePrio.className = "badge badge-insert";
+      badgePrio.className = "badge badge-prioritario";
       badgePrio.textContent = "Prioritario";
       tdPrioridade.appendChild(badgePrio);
     } else {
@@ -791,22 +822,7 @@ function montarClientesSandbox(clientes, highlightId) {
     tr.appendChild(tdPrioridade);
 
     const tdActions = document.createElement("td");
-    const wrap = document.createElement("div");
-    wrap.className = "row-actions";
-    const btnHist = document.createElement("button");
-    btnHist.type = "button"; btnHist.className = "btn-icon"; btnHist.textContent = "Historico";
-    btnHist.addEventListener("click", () => abrirModalHistorico(c));
-    const btnAtend = document.createElement("button");
-    btnAtend.type = "button"; btnAtend.className = "btn-icon"; btnAtend.textContent = "Atendimentos";
-    btnAtend.addEventListener("click", () => abrirModalAtendimento(c));
-    const btnEdit = document.createElement("button");
-    btnEdit.type = "button"; btnEdit.className = "btn-icon"; btnEdit.textContent = "Editar";
-    btnEdit.addEventListener("click", () => abrirModalEditar(c));
-    const btnDel = document.createElement("button");
-    btnDel.type = "button"; btnDel.className = "btn-icon danger"; btnDel.textContent = "Excluir";
-    btnDel.addEventListener("click", () => abrirModalExcluir(c));
-    wrap.append(btnHist, btnAtend, btnEdit, btnDel);
-    tdActions.appendChild(wrap);
+    tdActions.appendChild(criarMenuAcoesCliente(c));
     tr.appendChild(tdActions);
 
     tbody.appendChild(tr);
@@ -1648,7 +1664,9 @@ function wireEstatico() {
   });
 
   // Filtros do Cadastro
+  initDrawer("cadastro-filter-drawer-overlay", "cadastro-filter-drawer-open", "cadastro-filter-drawer-close");
   $("cadastro-filter-clear").addEventListener("click", limparFiltrosCadastro);
+  $("cadastro-filter-drawer-clear").addEventListener("click", limparFiltrosCadastro);
   $("cadastro-chips-extra").addEventListener("click", (e) => {
     const btn = e.target.closest(".chip[data-extra]");
     if (btn) toggleFiltroExtraCadastro(btn.dataset.extra);

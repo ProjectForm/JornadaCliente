@@ -118,8 +118,103 @@ function initHeaderScroll() {
   onScroll();
 }
 
+/* ============================================================================
+   SIDEBAR (navigation rail) -- colapso + destaque da secao visivel
+   (scroll-spy). Pagina unica com secoes ancoradas, nao rotas de verdade.
+   ============================================================================ */
+function initSidebar() {
+  const rail = document.getElementById("app-rail");
+  if (!rail) return;
+
+  const collapseBtn = document.getElementById("rail-collapse-btn");
+  if (collapseBtn) {
+    collapseBtn.addEventListener("click", () => document.body.classList.toggle("rail-collapsed"));
+  }
+
+  const links = [...rail.querySelectorAll(".rail-link[data-nav-target]")];
+  const targets = links
+    .map((l) => document.getElementById(l.dataset.navTarget))
+    .filter(Boolean);
+  if (!targets.length) return;
+
+  const setActive = (id) => links.forEach((l) => l.classList.toggle("is-active", l.dataset.navTarget === id));
+  setActive(targets[0].id);
+
+  if (!("IntersectionObserver" in window)) return;
+  const io = new IntersectionObserver((entries) => {
+    const visivel = entries
+      .filter((e) => e.isIntersecting)
+      .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+    if (visivel) setActive(visivel.target.id);
+  }, { rootMargin: "-15% 0px -70% 0px", threshold: [0, .25, .5, .75, 1] });
+  targets.forEach((t) => io.observe(t));
+}
+
+/* ============================================================================
+   DRAWER generico (filtros) -- mesmo padrao de animacao dos modais/painel de
+   detalhe ja existentes (overlay + classe is-open + Escape + clique fora).
+   ============================================================================ */
+function initDrawer(overlayId, openBtnId, closeBtnId) {
+  const overlay = document.getElementById(overlayId);
+  const openBtn = document.getElementById(openBtnId);
+  if (!overlay || !openBtn) return null;
+  const closeBtn = closeBtnId ? document.getElementById(closeBtnId) : overlay.querySelector(".drawer-close");
+
+  const open = () => {
+    overlay.hidden = false;
+    requestAnimationFrame(() => overlay.classList.add("is-open"));
+    openBtn.setAttribute("aria-expanded", "true");
+  };
+  const close = () => {
+    overlay.classList.remove("is-open");
+    openBtn.setAttribute("aria-expanded", "false");
+    setTimeout(() => { overlay.hidden = true; }, 320);
+  };
+
+  openBtn.addEventListener("click", open);
+  if (closeBtn) closeBtn.addEventListener("click", close);
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && overlay.classList.contains("is-open")) close();
+  });
+  return { open, close };
+}
+
+/* ============================================================================
+   MENU DE ACOES (...) -- delegacao global de clique/Escape, funciona para
+   qualquer .actions-menu-btn criado dinamicamente (ver supabase-demo.js).
+   ============================================================================ */
+function fecharTodosActionsMenus(exceto) {
+  document.querySelectorAll(".actions-menu-list").forEach((list) => {
+    if (list === exceto) return;
+    if (!list.hidden) {
+      list.hidden = true;
+      const btn = list.previousElementSibling;
+      if (btn && btn.classList.contains("actions-menu-btn")) btn.setAttribute("aria-expanded", "false");
+    }
+  });
+}
+
+function initActionsMenusGlobal() {
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(".actions-menu-btn");
+    if (!btn) { fecharTodosActionsMenus(); return; }
+    const list = btn.nextElementSibling;
+    if (!list || !list.classList.contains("actions-menu-list")) return;
+    fecharTodosActionsMenus(list);
+    const abrir = list.hidden;
+    list.hidden = !abrir;
+    btn.setAttribute("aria-expanded", String(abrir));
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") fecharTodosActionsMenus();
+  });
+}
+
 initReveal();
 initHeaderScroll();
+initSidebar();
+initActionsMenusGlobal();
 
 /* ============================================================================
    ESTADO DO DASHBOARD -- fonte unica de verdade: os 2500 clientes ja
@@ -391,44 +486,6 @@ function montarTabelaGestores(dados) {
 }
 
 /* ============================================================================
-   AUDITORIA (timeline) -- le demo_log ao vivo (mesma tabela que o Cadastro
-   escreve -- ver assets/supabase-demo.js). Nao reage aos filtros do
-   dashboard (e um log de sistema, nao uma visao de carteira).
-   ============================================================================ */
-function montarLog(logAlteracoes, gestoresPorIdDash) {
-  const container = document.getElementById("table-log");
-  const emptyState = document.getElementById("log-empty");
-
-  if (!logAlteracoes.length) {
-    container.hidden = true;
-    emptyState.hidden = false;
-    return;
-  }
-  container.hidden = false;
-  emptyState.hidden = true;
-
-  const rotulo = { INSERT: "incluiu", UPDATE: "editou", DELETE: "excluiu", ATENDIMENTO: "atualizou atendimento de", IMPORT: "importou", RESTORE: "restaurou versao de" };
-  const classeDot = { INSERT: "insert", UPDATE: "update", DELETE: "delete", ATENDIMENTO: "update", IMPORT: "insert", RESTORE: "update" };
-
-  container.innerHTML = logAlteracoes.map((l) => {
-    const acao = rotulo[l.operacao] || l.operacao;
-    const nomeGestor = gestoresPorIdDash.get(l.gestor_operador_id) || `#${l.gestor_operador_id}`;
-    const detalhe = l.campo
-      ? ` &middot; <strong>${l.campo}</strong>${l.valor_novo ? `: ${l.valor_antigo ? `${l.valor_antigo} &rarr; ` : ""}${l.valor_novo}` : ""}`
-      : "";
-    return `
-      <div class="timeline-item">
-        <span class="timeline-when">${new Date(l.criado_em).toLocaleString("pt-BR")}</span>
-        <span class="timeline-dot-col"><span class="timeline-dot ${classeDot[l.operacao] || ""}"></span></span>
-        <span class="timeline-body">
-          Gestor <strong>${nomeGestor}</strong> ${acao} um cliente${detalhe}
-        </span>
-      </div>
-    `;
-  }).join("");
-}
-
-/* ============================================================================
    BASE DE CLIENTES (tabela paginada) -- alimentada pelo subconjunto ja
    filtrado globalmente + a busca de texto local desta secao
    ============================================================================ */
@@ -589,6 +646,10 @@ function atualizarFilterBarUI(totalFiltrado) {
   document.getElementById("filter-clear").hidden = !algumAtivo;
   document.getElementById("filter-ver-clientes").hidden = !algumAtivo;
 
+  const qtdFiltrosAtivos = vertical.size + status.size + porte.size + (gestor ? 1 : 0);
+  const badge = document.getElementById("filter-count-badge");
+  if (badge) { badge.hidden = !qtdFiltrosAtivos; badge.textContent = String(qtdFiltrosAtivos); }
+
   const total = dashState.todos.length;
   document.getElementById("filter-result-count").textContent = algumAtivo
     ? `${fmtInt(totalFiltrado)} de ${fmtInt(total)} clientes`
@@ -722,6 +783,7 @@ function exportarClientesXLSX() {
    nunca sao substituidos, entao o listener nao precisa ser re-anexado)
    ============================================================================ */
 function wireInteracoesDashboard() {
+  initDrawer("filter-drawer-overlay", "filter-drawer-open", "filter-drawer-close");
   document.getElementById("filter-clear").addEventListener("click", limparFiltros);
   document.getElementById("filter-ver-clientes").addEventListener("click", irParaBaseFiltrada);
   document.getElementById("dataset-exportar").addEventListener("click", exportarClientesXLSX);
@@ -843,23 +905,15 @@ async function init() {
   try {
     if (!sb) throw new Error("Biblioteca do Supabase nao carregou.");
 
-    const gestoresRes = await sb.from("demo_gestores").select("*");
-    if (gestoresRes.error) throw gestoresRes.error;
-    const gestoresPorIdDash = new Map(gestoresRes.data.map((g) => [g.gestor_id, g.nome]));
-
-    const [clientes, logAlteracoes] = await Promise.all([
-      buscarTudoPaginado(() => sb.from("v_demo_clientes_completo")
-        .select("cliente_id:id, razao_social, cnpj, porte, gestor_id, gestor, vertical, municipio, status, "
-          + "pj_distinto_oficial:pj_distinto, qtd_planos_inconsistentes:qtd_inconsistencias, respondeu, aumento_faturamento_pct")
-        .order("criado_em", { ascending: true })),
-      sb.from("demo_log").select("*").order("criado_em", { ascending: false }).limit(200).then(({ data, error }) => {
-        if (error) throw error;
-        return data;
-      }),
-    ]);
+    // A trilha de auditoria ao vivo (demo_log) e renderizada dentro do
+    // Cadastro (ver assets/supabase-demo.js, #table-demo-log) -- nao ha
+    // mais uma secao "Auditoria" separada duplicando a mesma informacao.
+    const clientes = await buscarTudoPaginado(() => sb.from("v_demo_clientes_completo")
+      .select("cliente_id:id, razao_social, cnpj, porte, gestor_id, gestor, vertical, municipio, status, "
+        + "pj_distinto_oficial:pj_distinto, qtd_planos_inconsistentes:qtd_inconsistencias, respondeu, aumento_faturamento_pct")
+      .order("criado_em", { ascending: true }));
 
     dashState.todos = clientes.map(normalizarCliente);
-    montarLog(logAlteracoes, gestoresPorIdDash);
     construirFiltroBar(dashState.todos);
     document.getElementById("filter-bar").dataset.state = "ready";
     renderTudo(dashState.todos);

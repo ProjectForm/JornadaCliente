@@ -163,6 +163,22 @@ permanentemente editável por qualquer visitante do site.
   header e no eyebrow da landing, sem virar uma página institucional — a
   prioridade continua sendo produto + usabilidade.
 
+## 10.1 Etapa 3 — redesenho visual premium
+
+Reescrita completa do design system (`web/assets/style.css`): paleta clara
+grafite/off-white com azul institucional como cor de identidade, em vez do
+tema escuro monocromático das etapas anteriores. Componentes novos:
+sidebar de navegação por âncora (Visão Geral, Cadastro, Desempenho,
+Clientes, Gestores, Auditoria — todas seções que já existiam, nenhuma
+página inventada), drawer lateral para os filtros do Dashboard e do
+Cadastro (em vez da faixa de chips sempre visível), e menu de ações "⋯" na
+tabela do Cadastro (em vez de 4 botões de texto por linha). Nenhuma lógica
+de dados, permissão ou regra de negócio foi alterada — só apresentação. Ver
+`docs/UX_AUDIT.md` (estado anterior), `docs/DESIGN_FINAL.md` (sistema novo)
+e `docs/FINAL_REVIEW.md` (o que foi feito, o que ficou fora do escopo e por
+quê — inclui a limitação de não haver ferramenta de browser/screenshot
+neste ambiente para validação visual final).
+
 ## 11. Pendências conhecidas (fora do escopo desta etapa)
 
 - ~~A mensagem de erro "Sandbox cheio..." ainda existe no lado do banco~~ —

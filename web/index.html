@@ -12,12 +12,10 @@
 <header class="site-header" id="site-header">
   <div class="wrap header-row">
     <div class="brand">
-      <span class="brand-mark">Planilha de Controle &mdash; Jornada do Cliente</span>
+      <span class="brand-mark">Jornada do Cliente</span>
       <span class="brand-tag">&middot; SEBRAE &middot; ER Rio Preto</span>
     </div>
     <nav class="header-links">
-      <a href="#dashboard">Dashboard</a>
-      <a href="#dataset">Base</a>
       <a href="https://github.com/ProjectForm/JornadaCliente" target="_blank" rel="noopener">GitHub</a>
       <a href="#cadastro" class="btn-cta">Abrir Cadastro</a>
     </nav>
@@ -28,10 +26,55 @@
   <strong>100% dados sinteticos</strong> &mdash; gerados por script (seed fixa), sem qualquer vinculo com clientes, empresas ou dados reais.
 </div>
 
+<div class="app-shell">
+<nav class="app-rail" id="app-rail" aria-label="Navegacao principal">
+  <div class="rail-brand">
+    <span class="rail-brand-mark" aria-hidden="true">JC</span>
+    <div class="rail-brand-text">
+      <span class="l1">SEBRAE &middot; ER Rio Preto</span>
+      <span class="l2">Jornada do Cliente</span>
+    </div>
+  </div>
+  <div class="rail-nav">
+    <span class="rail-section-label">Navegar</span>
+    <a class="rail-link" href="#hero" data-nav-target="hero">
+      <span class="rail-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg></span>
+      <span class="rail-label">Visao Geral</span>
+    </a>
+    <a class="rail-link" href="#cadastro" data-nav-target="cadastro">
+      <span class="rail-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"></rect><path d="M9 4V3a1 1 0 011-1h4a1 1 0 011 1v1"></path><line x1="12" y1="10" x2="12" y2="16"></line><line x1="9" y1="13" x2="15" y2="13"></line></svg></span>
+      <span class="rail-label">Cadastro</span>
+    </a>
+    <a class="rail-link" href="#dashboard" data-nav-target="dashboard">
+      <span class="rail-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="20" x2="5" y2="11"></line><line x1="12" y1="20" x2="12" y2="5"></line><line x1="19" y1="20" x2="19" y2="14"></line></svg></span>
+      <span class="rail-label">Desempenho</span>
+    </a>
+    <a class="rail-link" href="#dataset" data-nav-target="dataset">
+      <span class="rail-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1.5"></rect><line x1="8" y1="8" x2="16" y2="8"></line><line x1="8" y1="12" x2="16" y2="12"></line><line x1="8" y1="16" x2="12" y2="16"></line></svg></span>
+      <span class="rail-label">Clientes</span>
+    </a>
+    <a class="rail-link" href="#ranking" data-nav-target="ranking">
+      <span class="rail-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"></circle><path d="M3.5 20c0-3.5 2.7-6 5.5-6s5.5 2.5 5.5 6"></path><polyline points="16 12 18 14 21.5 9.5"></polyline></svg></span>
+      <span class="rail-label">Gestores</span>
+    </a>
+    <a class="rail-link" href="#auditoria" data-nav-target="auditoria">
+      <span class="rail-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"></circle><polyline points="12 9 12 13 15 15"></polyline><path d="M5 5l-2 2"></path></svg></span>
+      <span class="rail-label">Auditoria</span>
+    </a>
+  </div>
+  <div class="rail-foot">
+    <button type="button" class="rail-collapse-btn" id="rail-collapse-btn" aria-label="Recolher navegacao">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="11 17 6 12 11 7"></polyline><polyline points="18 17 13 12 18 7"></polyline></svg>
+      <span class="rail-label">Recolher</span>
+    </button>
+  </div>
+</nav>
+<div class="app-content">
+
 <main>
 
   <!-- 01 — HERO: título + subtítulo → problema/valor → impacto → ação principal → funcionalidades -->
-  <section class="hero-section wrap">
+  <section class="hero-section wrap" id="hero">
     <p class="eyebrow" data-reveal>SEBRAE &middot; ER Rio Preto</p>
     <h1 class="hero-title" data-reveal data-reveal-delay="1">Do cadastro &agrave; decis&atilde;o,<br>sem cruzar planilhas.</h1>
     <p class="hero-sub" data-reveal data-reveal-delay="2">
@@ -122,31 +165,48 @@
       <p class="section-sub">Os mesmos n&uacute;meros que hoje exigiriam cruzar planilhas manualmente.</p>
     </div>
 
-    <div class="filter-bar" id="filter-bar" data-state="loading" data-reveal>
-      <div class="filter-bar-head">
-        <span class="filter-bar-title">Filtros do dashboard</span>
+    <div class="filter-toolbar" id="filter-bar" data-state="loading" data-reveal>
+      <div class="filter-toolbar-row">
         <span class="filter-result-count" id="filter-result-count">Carregando dados...</span>
-        <button type="button" class="btn btn-primary btn-sm" id="filter-ver-clientes" hidden>Ver clientes filtrados &rarr;</button>
-        <button type="button" class="filter-clear" id="filter-clear" hidden>Limpar filtros</button>
-      </div>
-      <div class="filter-groups">
-        <div class="filter-group">
-          <span class="filter-group-label">Vertical</span>
-          <div class="chip-row" id="chips-vertical"><span class="chip-skeleton"></span><span class="chip-skeleton"></span><span class="chip-skeleton"></span></div>
-        </div>
-        <div class="filter-group">
-          <span class="filter-group-label">Status</span>
-          <div class="chip-row" id="chips-status"><span class="chip-skeleton"></span><span class="chip-skeleton"></span></div>
-        </div>
-        <div class="filter-group">
-          <span class="filter-group-label">Porte</span>
-          <div class="chip-row" id="chips-porte"><span class="chip-skeleton"></span><span class="chip-skeleton"></span></div>
-        </div>
-        <div class="filter-group filter-group-gestor">
-          <span class="filter-group-label">Gestor</span>
-          <select class="input-select" id="filter-gestor" disabled><option value="">Todos os gestores</option></select>
+        <div class="filter-toolbar-actions">
+          <button type="button" class="btn btn-ghost btn-sm" id="filter-ver-clientes" hidden>Ver clientes filtrados &rarr;</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="filter-clear" hidden>Limpar filtros</button>
+          <button type="button" class="filter-trigger-btn" id="filter-drawer-open" aria-haspopup="dialog" aria-expanded="false">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="8" y1="12" x2="16" y2="12"></line><line x1="11" y1="18" x2="13" y2="18"></line></svg>
+            Filtros
+            <span class="filter-count-badge" id="filter-count-badge" hidden>0</span>
+          </button>
         </div>
       </div>
+    </div>
+
+    <div class="drawer-overlay" id="filter-drawer-overlay" hidden>
+      <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="filter-drawer-title">
+        <div class="drawer-head">
+          <h4 id="filter-drawer-title">Filtros do dashboard</h4>
+          <button type="button" class="drawer-close" id="filter-drawer-close" aria-label="Fechar filtros">&times;</button>
+        </div>
+        <div class="drawer-body">
+          <div class="filter-groups">
+            <div class="filter-group">
+              <span class="filter-group-label">Vertical</span>
+              <div class="chip-row" id="chips-vertical"><span class="chip-skeleton"></span><span class="chip-skeleton"></span><span class="chip-skeleton"></span></div>
+            </div>
+            <div class="filter-group">
+              <span class="filter-group-label">Status</span>
+              <div class="chip-row" id="chips-status"><span class="chip-skeleton"></span><span class="chip-skeleton"></span></div>
+            </div>
+            <div class="filter-group">
+              <span class="filter-group-label">Porte</span>
+              <div class="chip-row" id="chips-porte"><span class="chip-skeleton"></span><span class="chip-skeleton"></span></div>
+            </div>
+            <div class="filter-group filter-group-gestor">
+              <span class="filter-group-label">Gestor</span>
+              <select class="input-select" id="filter-gestor" disabled><option value="">Todos os gestores</option></select>
+            </div>
+          </div>
+        </div>
+      </aside>
     </div>
 
     <div class="kpi-hero-row" data-reveal>
@@ -198,7 +258,10 @@
         <p class="card-sub">Os clientes da carteira, ao vivo do banco (Supabase) &mdash; mesma base do Cadastro. Vis&atilde;o somente leitura aqui, usa os filtros acima, mais busca e pagina&ccedil;&atilde;o (clique numa linha para ver o detalhe). Para incluir, editar ou excluir um cliente, use o <a href="#cadastro" style="color:var(--ink-0)">Cadastro</a>.</p>
       </div>
       <div class="filters-row">
-        <input type="search" id="clientes-busca" placeholder="Buscar por razao social ou CNPJ..." class="input-search">
+        <div class="search-field">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="search" id="clientes-busca" placeholder="Buscar por razao social ou CNPJ..." class="input-search">
+        </div>
         <button type="button" class="btn btn-ghost btn-sm" id="dataset-exportar">Exportar XLSX</button>
       </div>
       <div class="table-wrap">
@@ -446,42 +509,16 @@
           </div>
           <div class="sandbox-ranking" id="sandbox-ranking"></div>
 
-          <div class="filter-bar" id="cadastro-filter-bar" data-state="loading">
-            <div class="filter-bar-head">
-              <span class="filter-bar-title">Filtros do Cadastro</span>
+          <div class="filter-toolbar" id="cadastro-filter-bar" data-state="loading">
+            <div class="filter-toolbar-row">
               <span class="filter-result-count" id="cadastro-result-count">Carregando dados...</span>
-              <button type="button" class="filter-clear" id="cadastro-filter-clear" hidden>Limpar filtros</button>
-            </div>
-            <div class="filter-groups">
-              <div class="filter-group">
-                <span class="filter-group-label">Vertical</span>
-                <div class="chip-row" id="cadastro-chips-vertical"><span class="chip-skeleton"></span><span class="chip-skeleton"></span></div>
-              </div>
-              <div class="filter-group">
-                <span class="filter-group-label">Status</span>
-                <div class="chip-row" id="cadastro-chips-status"><span class="chip-skeleton"></span><span class="chip-skeleton"></span></div>
-              </div>
-              <div class="filter-group">
-                <span class="filter-group-label">Porte</span>
-                <div class="chip-row" id="cadastro-chips-porte"><span class="chip-skeleton"></span><span class="chip-skeleton"></span></div>
-              </div>
-              <div class="filter-group">
-                <span class="filter-group-label">Outros</span>
-                <div class="chip-row" id="cadastro-chips-extra">
-                  <button type="button" class="chip" data-extra="prioritario">Priorit&aacute;rio</button>
-                  <button type="button" class="chip" data-extra="inconsistente">Inconsistente</button>
-                  <button type="button" class="chip" data-extra="respondeu">Respondeu pesquisa</button>
-                </div>
-              </div>
-              <div class="filter-group filter-group-gestor">
-                <span class="filter-group-label">Gestor</span>
-                <input type="text" id="cadastro-filtro-gestor" class="input-select" list="cadastro-gestores-lista" placeholder="Todos os gestores" autocomplete="off">
-                <datalist id="cadastro-gestores-lista"></datalist>
-              </div>
-              <div class="filter-group filter-group-gestor">
-                <span class="filter-group-label">Munic&iacute;pio</span>
-                <input type="text" id="cadastro-filtro-municipio" class="input-select" list="cadastro-municipios-lista" placeholder="Todos os munic&iacute;pios" autocomplete="off">
-                <datalist id="cadastro-municipios-lista"></datalist>
+              <div class="filter-toolbar-actions">
+                <button type="button" class="btn btn-ghost btn-sm" id="cadastro-filter-clear" hidden>Limpar filtros</button>
+                <button type="button" class="filter-trigger-btn" id="cadastro-filter-drawer-open" aria-haspopup="dialog" aria-expanded="false">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="8" y1="12" x2="16" y2="12"></line><line x1="11" y1="18" x2="13" y2="18"></line></svg>
+                  Filtros
+                  <span class="filter-count-badge" id="cadastro-filter-count-badge" hidden>0</span>
+                </button>
               </div>
             </div>
             <div class="filtros-ativos" id="cadastro-filtros-ativos" hidden>
@@ -490,8 +527,57 @@
             </div>
           </div>
 
+          <div class="drawer-overlay" id="cadastro-filter-drawer-overlay" hidden>
+            <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="cadastro-filter-drawer-title">
+              <div class="drawer-head">
+                <h4 id="cadastro-filter-drawer-title">Filtros do Cadastro</h4>
+                <button type="button" class="drawer-close" id="cadastro-filter-drawer-close" aria-label="Fechar filtros">&times;</button>
+              </div>
+              <div class="drawer-body">
+                <div class="filter-groups">
+                  <div class="filter-group">
+                    <span class="filter-group-label">Vertical</span>
+                    <div class="chip-row" id="cadastro-chips-vertical"><span class="chip-skeleton"></span><span class="chip-skeleton"></span></div>
+                  </div>
+                  <div class="filter-group">
+                    <span class="filter-group-label">Status</span>
+                    <div class="chip-row" id="cadastro-chips-status"><span class="chip-skeleton"></span><span class="chip-skeleton"></span></div>
+                  </div>
+                  <div class="filter-group">
+                    <span class="filter-group-label">Porte</span>
+                    <div class="chip-row" id="cadastro-chips-porte"><span class="chip-skeleton"></span><span class="chip-skeleton"></span></div>
+                  </div>
+                  <div class="filter-group">
+                    <span class="filter-group-label">Outros</span>
+                    <div class="chip-row" id="cadastro-chips-extra">
+                      <button type="button" class="chip" data-extra="prioritario">Priorit&aacute;rio</button>
+                      <button type="button" class="chip" data-extra="inconsistente">Inconsistente</button>
+                      <button type="button" class="chip" data-extra="respondeu">Respondeu pesquisa</button>
+                    </div>
+                  </div>
+                  <div class="filter-group filter-group-gestor">
+                    <span class="filter-group-label">Gestor</span>
+                    <input type="text" id="cadastro-filtro-gestor" class="input-select" list="cadastro-gestores-lista" placeholder="Todos os gestores" autocomplete="off">
+                    <datalist id="cadastro-gestores-lista"></datalist>
+                  </div>
+                  <div class="filter-group filter-group-gestor">
+                    <span class="filter-group-label">Munic&iacute;pio</span>
+                    <input type="text" id="cadastro-filtro-municipio" class="input-select" list="cadastro-municipios-lista" placeholder="Todos os munic&iacute;pios" autocomplete="off">
+                    <datalist id="cadastro-municipios-lista"></datalist>
+                  </div>
+                </div>
+              </div>
+              <div class="drawer-foot">
+                <button type="button" class="btn btn-ghost" id="cadastro-filter-drawer-clear">Limpar filtros</button>
+              </div>
+            </aside>
+          </div>
+
           <div class="cadastro-toolbar">
-            <input type="search" id="cadastro-busca" class="input-search" placeholder="Buscar por raz&atilde;o social, CNPJ ou gestor..." aria-label="Buscar clientes do Cadastro">
+            <div class="search-field">
+              <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="search" id="cadastro-busca" class="input-search" placeholder="Buscar por raz&atilde;o social, CNPJ ou gestor..." aria-label="Buscar clientes do Cadastro">
+            </div>
             <div class="ordenacao-row">
               <label for="cadastro-ordenar-por">Ordenar por</label>
               <select id="cadastro-ordenar-por" class="input-select">
@@ -526,7 +612,7 @@
         </div>
       </div>
 
-      <div class="table-wrap">
+      <div class="table-wrap" id="auditoria">
         <h4>Atividade recente do Cadastro</h4>
         <div class="timeline" id="table-demo-log"></div>
         <p class="empty-state" id="demo-log-empty" hidden>Nenhuma altera&ccedil;&atilde;o no Cadastro ainda.</p>
@@ -687,7 +773,7 @@
   </div>
 
   <!-- ranking de gestores -->
-  <section class="wrap section-pad">
+  <section class="wrap section-pad" id="ranking">
     <div class="card lift" data-reveal>
       <div class="card-head">
         <h3>Ranking de gestores
@@ -708,19 +794,6 @@
           <tbody></tbody>
         </table>
       </div>
-    </div>
-  </section>
-
-  <!-- 08 — AUDITORIA -->
-  <section class="wrap section-pad" id="auditoria">
-    <div class="card lift" data-reveal>
-      <div class="card-head">
-        <p class="eyebrow"><span class="index">08</span> Auditoria</p>
-        <h3>Trilha de altera&ccedil;&otilde;es</h3>
-        <p class="card-sub">&Uacute;ltimas inclus&otilde;es/edi&ccedil;&otilde;es/exclus&otilde;es feitas pelos gestores via CLI (<code>log_alteracoes</code>)</p>
-      </div>
-      <div class="timeline" id="table-log"></div>
-      <p class="empty-state" id="log-empty" hidden>Nenhuma altera&ccedil;&atilde;o registrada ainda neste ambiente &mdash; toda inclus&atilde;o/edi&ccedil;&atilde;o/exclus&atilde;o feita via <code>adicionar_cliente.py</code> aparece aqui.</p>
     </div>
   </section>
 
@@ -765,6 +838,9 @@
     <p><a href="https://github.com/ProjectForm/JornadaCliente" target="_blank" rel="noopener">C&oacute;digo-fonte no GitHub &rarr;</a></p>
   </div>
 </footer>
+
+</div><!-- /.app-content -->
+</div><!-- /.app-shell -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
