@@ -159,13 +159,13 @@ usuário sobre "por que existem duas listas de clientes".
 
 ## 11. Pendências conhecidas (fora do escopo desta etapa)
 
-- A mensagem de erro "Sandbox cheio..." ainda existe no lado do banco
-  (função `raise exception` em `supabase/schema_demo.sql`, linha ~255) — só
-  aparece se o limite de linhas de demonstração for atingido. Corrigi-la
-  exige rodar uma alteração na função já publicada no Supabase (mudança de
-  banco em produção), o que não foi feito nesta etapa por não ter acesso de
-  execução ao projeto Supabase a partir daqui — fica registrado para quando
-  o schema for revisado por outro motivo.
-- Histórico de versões, restauração de versões, sistema completo de
-  auditoria, animações avançadas, redesign final dos gráficos e backup ficam
-  para as próximas etapas, por decisão explícita de escopo.
+- ~~A mensagem de erro "Sandbox cheio..." ainda existe no lado do banco~~ —
+  **corrigida na Etapa 2** (`supabase/schema_demo_v2_operacao.sql`), junto
+  com filtros clicáveis, busca/ordenação/paginação reais no banco,
+  exportação com confirmação de contagem, detecção de duplicidade,
+  histórico e versionamento por cliente, restauração de versão e
+  reatribuição de gestor. Ver `docs/OPERACAO_CADASTRO.md` e
+  `docs/AUDITORIA_E_VERSIONAMENTO.md`.
+- Redesign visual premium, animações avançadas e refinamento final de
+  microinterações ficam para a próxima etapa, por decisão explícita de
+  escopo (Etapa 2 foi funcionalidade + governança, não design).

@@ -365,7 +365,8 @@
         <div class="stat-tile sandbox-kpi skeleton" data-kpi="total"><span class="stat-label">Total de clientes<button type="button" class="kpi-info" data-info="total" aria-label="Como este indicador e calculado" title="Total de clientes ativos no Cadastro (excluidos nao contam).">i</button></span><span class="stat-value">&nbsp;</span></div>
         <div class="stat-tile sandbox-kpi skeleton" data-kpi="pj_distinto"><span class="stat-label">PJ Distinto<button type="button" class="kpi-info" data-info="pj_distinto" aria-label="Como este indicador e calculado" title="Clientes concluintes (>=1 diagnostico + 2 assessorias validas, ou >=1 atendimento Sebraetec valido) em pelo menos um Centro de Custo.">i</button></span><span class="stat-value">&nbsp;</span></div>
         <div class="stat-tile sandbox-kpi skeleton" data-kpi="inconsistente"><span class="stat-label">Inconsistentes<button type="button" class="kpi-info" data-info="inconsistente" aria-label="Como este indicador e calculado" title="Clientes que seriam concluintes se os atendimentos lancados fossem validos, mas nao sao -- indica erro/pendencia na fonte, tratado separado da conclusao.">i</button></span><span class="stat-value">&nbsp;</span></div>
-        <div class="stat-tile sandbox-kpi skeleton" data-kpi="prioritario"><span class="stat-label">Priorit&aacute;rios<button type="button" class="kpi-info" data-info="prioritario" aria-label="Como este indicador e calculado" title="Clientes marcados manualmente como prioritarios pelo gestor responsavel.">i</button></span><span class="stat-value">&nbsp;</span></div>
+        <div class="stat-tile sandbox-kpi skeleton" data-kpi="prioritario"><span class="stat-label">Priorit&aacute;rios<button type="button" class="kpi-info" data-info="prioritario" aria-label="Como este indicador e calculado" title="Calculado: respondeu a pesquisa, informou aumento de faturamento e AINDA NAO e Concluinte. Deixa de ser prioritario assim que completar a regra de conclusao.">i</button></span><span class="stat-value">&nbsp;</span></div>
+        <div class="stat-tile sandbox-kpi skeleton" data-kpi="gestores"><span class="stat-label">Gestores ativos<button type="button" class="kpi-info" data-info="gestores" aria-label="Como este indicador e calculado" title="Gestores com pelo menos 1 cliente no Cadastro.">i</button></span><span class="stat-value">&nbsp;</span></div>
         <div class="stat-tile sandbox-kpi skeleton" data-kpi="respondentes"><span class="stat-label">Respondentes<button type="button" class="kpi-info" data-info="respondentes" aria-label="Como este indicador e calculado" title="Clientes que responderam a pesquisa de acompanhamento.">i</button></span><span class="stat-value">&nbsp;</span></div>
         <div class="stat-tile sandbox-kpi skeleton" data-kpi="aumento"><span class="stat-label">Aumento m&eacute;dio<button type="button" class="kpi-info" data-info="aumento" aria-label="Como este indicador e calculado" title="Media do percentual de aumento de faturamento, apenas entre quem respondeu a pesquisa.">i</button></span><span class="stat-value">&nbsp;</span></div>
       </div>
@@ -396,6 +397,7 @@
               <input type="text" id="demo-cnpj" inputmode="numeric" required placeholder="00.000.000/0000-00" autocomplete="off">
               <span class="field-error" id="erro-cnpj" aria-live="polite"></span>
             </label>
+            <div class="dup-warning" id="cadastro-duplicidade-aviso" hidden></div>
             <label>Porte
               <select id="demo-porte" required>
                 <option value="MEI">MEI</option>
@@ -411,7 +413,6 @@
                 <input type="text" id="demo-municipio" maxlength="60" autocomplete="off">
               </label>
               <label class="demo-check"><input type="checkbox" id="demo-ali"> Indica&ccedil;&atilde;o de ALI</label>
-              <label class="demo-check"><input type="checkbox" id="demo-prioritario"> Cliente priorit&aacute;rio</label>
               <label class="demo-check"><input type="checkbox" id="demo-respondeu"> Respondeu a pesquisa</label>
               <label id="demo-aumento-wrap" hidden>% de aumento de faturamento informado
                 <input type="number" id="demo-aumento" min="-100" max="500" step="0.1">
@@ -430,31 +431,94 @@
         <div class="demo-list">
           <div class="demo-list-head">
             <h4>Base de clientes do Cadastro</h4>
-            <div class="cadastro-list-controls">
-              <input type="search" id="cadastro-busca" class="input-search input-search-sm" placeholder="Buscar por razao social ou CNPJ..." aria-label="Buscar clientes do Cadastro">
-              <div class="ranking-criterio">
-                <label for="sandbox-ranking-criterio">Ranking por</label>
-                <select id="sandbox-ranking-criterio" class="input-select">
-                  <option value="clientes">Mais clientes</option>
-                  <option value="pj_distintos">Mais PJ Distintos</option>
-                  <option value="pct_conclusao">Maior % de conclus&atilde;o</option>
-                  <option value="respondentes">Mais respondentes</option>
-                  <option value="aumento_medio">Maior aumento m&eacute;dio</option>
-                  <option value="inconsistencias">Mais inconsist&ecirc;ncias</option>
-                </select>
-              </div>
+            <div class="ranking-criterio">
+              <label for="sandbox-ranking-criterio">Ranking por</label>
+              <select id="sandbox-ranking-criterio" class="input-select">
+                <option value="clientes">Mais clientes</option>
+                <option value="pj_distintos">Mais PJ Distintos</option>
+                <option value="pct_conclusao">Maior % de conclus&atilde;o</option>
+                <option value="respondentes">Mais respondentes</option>
+                <option value="aumento_medio">Maior aumento m&eacute;dio</option>
+                <option value="inconsistencias">Mais inconsist&ecirc;ncias</option>
+              </select>
             </div>
           </div>
-          <p class="roadmap-note">Em breve nesta &aacute;rea: filtros por vertical/status/gestor, prioriza&ccedil;&atilde;o autom&aacute;tica e hist&oacute;rico de altera&ccedil;&otilde;es por cliente.</p>
           <div class="sandbox-ranking" id="sandbox-ranking"></div>
+
+          <div class="filter-bar" id="cadastro-filter-bar" data-state="loading">
+            <div class="filter-bar-head">
+              <span class="filter-bar-title">Filtros do Cadastro</span>
+              <span class="filter-result-count" id="cadastro-result-count">Carregando dados...</span>
+              <button type="button" class="filter-clear" id="cadastro-filter-clear" hidden>Limpar filtros</button>
+            </div>
+            <div class="filter-groups">
+              <div class="filter-group">
+                <span class="filter-group-label">Vertical</span>
+                <div class="chip-row" id="cadastro-chips-vertical"><span class="chip-skeleton"></span><span class="chip-skeleton"></span></div>
+              </div>
+              <div class="filter-group">
+                <span class="filter-group-label">Status</span>
+                <div class="chip-row" id="cadastro-chips-status"><span class="chip-skeleton"></span><span class="chip-skeleton"></span></div>
+              </div>
+              <div class="filter-group">
+                <span class="filter-group-label">Porte</span>
+                <div class="chip-row" id="cadastro-chips-porte"><span class="chip-skeleton"></span><span class="chip-skeleton"></span></div>
+              </div>
+              <div class="filter-group">
+                <span class="filter-group-label">Outros</span>
+                <div class="chip-row" id="cadastro-chips-extra">
+                  <button type="button" class="chip" data-extra="prioritario">Priorit&aacute;rio</button>
+                  <button type="button" class="chip" data-extra="inconsistente">Inconsistente</button>
+                  <button type="button" class="chip" data-extra="respondeu">Respondeu pesquisa</button>
+                </div>
+              </div>
+              <div class="filter-group filter-group-gestor">
+                <span class="filter-group-label">Gestor</span>
+                <input type="text" id="cadastro-filtro-gestor" class="input-select" list="cadastro-gestores-lista" placeholder="Todos os gestores" autocomplete="off">
+                <datalist id="cadastro-gestores-lista"></datalist>
+              </div>
+              <div class="filter-group filter-group-gestor">
+                <span class="filter-group-label">Munic&iacute;pio</span>
+                <input type="text" id="cadastro-filtro-municipio" class="input-select" list="cadastro-municipios-lista" placeholder="Todos os munic&iacute;pios" autocomplete="off">
+                <datalist id="cadastro-municipios-lista"></datalist>
+              </div>
+            </div>
+            <div class="filtros-ativos" id="cadastro-filtros-ativos" hidden>
+              <span class="filtros-ativos-label">Filtros ativos:</span>
+              <div class="chip-row" id="cadastro-filtros-ativos-lista"></div>
+            </div>
+          </div>
+
+          <div class="cadastro-toolbar">
+            <input type="search" id="cadastro-busca" class="input-search" placeholder="Buscar por raz&atilde;o social, CNPJ ou gestor..." aria-label="Buscar clientes do Cadastro">
+            <div class="ordenacao-row">
+              <label for="cadastro-ordenar-por">Ordenar por</label>
+              <select id="cadastro-ordenar-por" class="input-select">
+                <option value="criado_em">Data de inclus&atilde;o</option>
+                <option value="atualizado_em">&Uacute;ltima atualiza&ccedil;&atilde;o</option>
+                <option value="razao_social">Raz&atilde;o social</option>
+                <option value="cnpj">CNPJ</option>
+                <option value="gestor">Gestor</option>
+                <option value="status">Status</option>
+                <option value="prioritario">Prioridade</option>
+                <option value="aumento_faturamento_pct">% aumento de faturamento</option>
+              </select>
+              <button type="button" class="ordem-toggle" id="cadastro-ordem-toggle" data-asc="false" title="Alternar ordem ascendente/descendente">&darr; Descendente</button>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" id="cadastro-exportar">Exportar XLSX</button>
+          </div>
+
+          <p class="dataset-count" id="cadastro-contagem"></p>
+
           <div class="table-wrap">
             <table class="data-table" id="table-demo-clientes">
               <thead>
-                <tr><th>Cliente</th><th>Porte</th><th>Gestor</th><th>Vertical</th><th>Status</th><th></th></tr>
+                <tr><th>Cliente</th><th>Porte</th><th>Gestor</th><th>Vertical</th><th>Status</th><th>Prioridade</th><th></th></tr>
               </thead>
               <tbody></tbody>
             </table>
           </div>
+          <div class="pager" id="cadastro-pager"></div>
           <p class="empty-state" id="demo-clientes-empty" hidden>
             Nenhum cliente no Cadastro.<br>Use o formul&aacute;rio ao lado para criar o primeiro registro.
           </p>
@@ -491,7 +555,6 @@
           <input type="text" id="editar-municipio" maxlength="60">
         </label>
         <label class="demo-check"><input type="checkbox" id="editar-ali"> Indica&ccedil;&atilde;o de ALI</label>
-        <label class="demo-check"><input type="checkbox" id="editar-prioritario"> Cliente priorit&aacute;rio</label>
         <label class="demo-check"><input type="checkbox" id="editar-respondeu"> Respondeu a pesquisa</label>
         <label id="editar-aumento-wrap" hidden>% de aumento de faturamento informado
           <input type="number" id="editar-aumento" min="-100" max="500" step="0.1">
@@ -499,18 +562,53 @@
         <label>Observa&ccedil;&otilde;es
           <textarea id="editar-observacoes" maxlength="300" rows="2"></textarea>
         </label>
-        <div class="modal-readonly">
-          <span>Gestor respons&aacute;vel: <strong id="editar-gestor-nome"></strong></span>
-          <span>Vertical: <strong id="editar-gestor-vertical"></strong></span>
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn btn-ghost" data-modal-close>Cancelar</button>
-          <button type="submit" class="btn btn-primary" id="editar-submit">
-            <span class="btn-spinner" hidden></span>
-            <span class="btn-label">Salvar altera&ccedil;&otilde;es</span>
-          </button>
+        <label>Gestor respons&aacute;vel
+          <input type="text" id="editar-gestor-input" list="cadastro-gestores-lista" autocomplete="off">
+          <span class="field-hint">Reatribuir muda quem tem permiss&atilde;o sobre este cliente daqui pra frente. Vertical atual: <strong id="editar-gestor-vertical"></strong></span>
+        </label>
+        <div class="modal-actions modal-actions-between">
+          <button type="button" class="btn btn-ghost btn-sm" id="editar-ver-historico">Ver hist&oacute;rico e vers&otilde;es</button>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-ghost" data-modal-close>Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="editar-submit">
+              <span class="btn-spinner" hidden></span>
+              <span class="btn-label">Salvar altera&ccedil;&otilde;es</span>
+            </button>
+          </div>
         </div>
       </form>
+    </div>
+
+    <div class="modal-dialog modal-dialog-wide" id="modal-historico" role="dialog" aria-modal="true" aria-labelledby="modal-historico-title" hidden>
+      <h4 id="modal-historico-title">Hist&oacute;rico e vers&otilde;es</h4>
+      <p class="modal-text" id="historico-cliente-nome"></p>
+      <div class="historico-tabs">
+        <button type="button" class="historico-tab is-active" data-historico-tab="timeline">Linha do tempo</button>
+        <button type="button" class="historico-tab" data-historico-tab="versoes">Vers&otilde;es</button>
+      </div>
+      <div id="historico-painel-timeline" class="historico-painel">
+        <div class="timeline" id="historico-timeline"></div>
+        <p class="empty-state" id="historico-timeline-empty" hidden>Nenhuma altera&ccedil;&atilde;o registrada para este cliente ainda.</p>
+      </div>
+      <div id="historico-painel-versoes" class="historico-painel" hidden>
+        <p class="modal-text modal-text-muted">Cada altera&ccedil;&atilde;o relevante grava uma vers&atilde;o. Restaurar cria uma vers&atilde;o nova &mdash; nenhuma vers&atilde;o anterior &eacute; apagada.</p>
+        <div id="historico-versoes-lista" class="historico-versoes-lista"></div>
+        <p class="empty-state" id="historico-versoes-empty" hidden>Nenhuma vers&atilde;o registrada para este cliente ainda.</p>
+        <div id="historico-restaurar-diff" class="historico-restaurar-diff" hidden>
+          <h5>Confirmar restaura&ccedil;&atilde;o</h5>
+          <div id="historico-diff-campos" class="historico-diff-campos"></div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-ghost" id="historico-restaurar-cancelar">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="historico-restaurar-confirmar">
+              <span class="btn-spinner" hidden></span>
+              <span class="btn-label">Restaurar esta vers&atilde;o</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" data-modal-close>Fechar</button>
+      </div>
     </div>
 
     <div class="modal-dialog modal-dialog-wide" id="modal-atendimento" role="dialog" aria-modal="true" aria-labelledby="modal-atendimento-title" hidden>

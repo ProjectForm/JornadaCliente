@@ -1,11 +1,21 @@
-// Sandbox publico de demonstracao (banco Postgres real, Supabase) -- Fase 4:
-// mini-BI ao vivo. Schema/RLS/funcoes/regra de negocio: supabase/schema_demo.sql
-// no repositorio -- NENHUMA regra de permissao ou de classificacao (Concluinte/
-// Inconsistente) mora neste arquivo. A view v_demo_clientes_completo (e as
+// Cadastro -- banco Postgres real (Supabase). Schema/RLS/funcoes/regra de
+// negocio: supabase/schema_demo.sql (schema completo) e
+// supabase/schema_demo_v2_operacao.sql (migracao aditiva da Etapa 2 --
+// historico, versionamento, restauracao, reatribuicao de gestor). NENHUMA
+// regra de permissao ou de classificacao (Concluinte/Inconsistente/
+// Prioritario) mora neste arquivo -- a view v_demo_clientes_completo (e as
 // views que ela usa) SAO a fonte unica de verdade: este arquivo so le o que
-// elas ja calcularam e apresenta. Apos qualquer INSERT/UPDATE/DELETE via RPC,
-// TUDO e recarregado da mesma fonte (recarregarSandboxEAtualizarTudo) -- nao
-// existe recalculo paralelo em JS, nem F5 manual necessario.
+// elas ja calcularam e apresenta. Apos qualquer escrita via RPC, TUDO e
+// recarregado da mesma fonte (recarregarSandboxEAtualizarTudo) -- nao existe
+// recalculo paralelo em JS, nem F5 manual necessario.
+//
+// ETAPA 2 -- mudanca de arquitetura na tabela de clientes: em vez de carregar
+// todos os clientes uma vez e filtrar/ordenar/paginar em JS, a TABELA usa uma
+// consulta dedicada contra a view (filtros/busca/ordenacao/paginacao=
+// .eq/.in/.ilike/.order/.range do PostgREST) -- o resultado exportado ou
+// mostrado e sempre o resultado real da consulta, nunca um reordenamento
+// visual. KPIs/ranking continuam agregados sobre a lista completa (o teto de
+// 200 clientes ativos torna isso barato) -- ver carregarSandboxCompleto().
 //
 // A anon key abaixo e destinada a ficar publica no cliente -- a seguranca
 // mora nas policies de RLS e nas funcoes SECURITY DEFINER do banco.
@@ -14,6 +24,28 @@ const SUPABASE_ANON_KEY = "sb_publishable_3n7XKPYyCEZSKybccTYF5g_hfwdllVX";
 
 const CNPJ_LEN = 14;
 const RAZAO_MAX = 80;
+const STATUS_VALORES = ["Concluinte", "Participante", "Sem atendimento"];
+const CADASTRO_POR_PAGINA = 20;
+
+const OPCOES_ORDENACAO = [
+  { value: "criado_em", label: "Data de inclusao" },
+  { value: "atualizado_em", label: "Ultima atualizacao" },
+  { value: "razao_social", label: "Razao social" },
+  { value: "cnpj", label: "CNPJ" },
+  { value: "gestor", label: "Gestor" },
+  { value: "status", label: "Status" },
+  { value: "prioritario", label: "Prioridade" },
+  { value: "aumento_faturamento_pct", label: "% aumento de faturamento" },
+];
+
+const ROTULOS_CAMPO = {
+  razao_social: "Razao social", porte: "Porte", gestor_id: "Gestor", municipio: "Municipio",
+  cpf: "CPF", celular: "Celular", email: "E-mail", whatsapp_atualizado: "WhatsApp atualizado",
+  email_atualizado: "E-mail atualizado", ali: "Indicacao de ALI", observacoes: "Observacoes",
+  termo: "Termo", data_termo: "Data do termo", respondeu: "Respondeu pesquisa", data_pesquisa: "Data da pesquisa",
+  aumento_faturamento_pct: "% aumento de faturamento", aumento_informado_pct: "% aumento informado",
+  diagnostico_rae: "Diagnostico RAE", assessoramento_rae: "Assessoramento RAE", ot_final: "OT final",
+};
 
 const CRITERIOS_RANKING = {
   clientes: { label: "Mais clientes", calc: (r) => r.total, fmt: (v) => fmtInt(v) },
@@ -27,22 +59,41 @@ const CRITERIOS_RANKING = {
 let sb = null;
 let gestoresPorId = new Map();
 let centrosCustoPorId = new Map();
-let sandboxClientes = [];
+let sandboxClientes = []; // lista COMPLETA de clientes ativos -- alimenta KPIs, ranking, dedup, datalists
 let sandboxLogs = [];
 let connState = "connecting";
 let clienteEmEdicao = null;
 let clienteParaExcluir = null;
 let clienteParaAtendimento = null;
+let clienteHistoricoAtual = null;
+let versoesHistoricoAtual = [];
 let focoAntesDoModal = null;
 let ultimaSincronizacao = null;
 let criterioRanking = "pj_distintos";
-let drillDownFiltro = null; // { tipo, valor, label }
-let buscaCadastro = "";
 let highlightFirstLog = false;
+
+// Estado da TABELA do Cadastro -- fonte unica dos filtros/busca/ordenacao/
+// paginacao; toda mudanca aqui dispara uma nova consulta ao banco (ver
+// atualizarTabelaCadastro()), nunca um filtro em memoria.
+const cadastroFiltros = {
+  vertical: new Set(), status: new Set(), porte: new Set(),
+  gestorId: null, municipio: null,
+  prioritario: null, inconsistente: null, respondeu: null,
+};
+let cadastroBusca = "";
+let cadastroOrdenarPor = "criado_em";
+let cadastroOrdemAsc = false;
+let cadastroPagina = 1;
+let cadastroTabela = { linhas: [], total: 0 };
 
 const $ = (id) => document.getElementById(id);
 
 function arred1(n) { return Math.round(n * 10) / 10; }
+
+function debounce(fn, wait) {
+  let timer;
+  return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), wait); };
+}
 
 /* ============================================================================
    CHAMADAS AO BANCO -- nenhuma logica de permissao/classificacao aqui, so a
@@ -70,6 +121,8 @@ async function carregarSandboxCompleto() {
   select.innerHTML = gestoresRes.data.map((g) => `<option value="${g.gestor_id}">${g.nome} (${g.vertical})</option>`).join("");
   if (valorAtual && gestoresPorId.has(Number(valorAtual))) select.value = valorAtual;
   atualizarOperador();
+
+  popularFiltrosDinamicos();
 }
 
 async function carregarClassificacaoCC(clienteId) {
@@ -103,6 +156,18 @@ async function definirAtendimentoDemo(params) {
     p_assessorias_total: params.assessoriasTotal, p_assessorias_validos: params.assessoriasValidos,
     p_sebraetec_total: params.sebraetecTotal, p_sebraetec_validos: params.sebraetecValidos,
   });
+  if (error) throw error;
+}
+
+async function reatribuirGestorDemo({ clienteId, operadorId, novoGestorId }) {
+  const { error } = await sb.rpc("demo_reatribuir_gestor", {
+    p_cliente_id: clienteId, p_gestor_operador_id: operadorId, p_novo_gestor_id: novoGestorId,
+  });
+  if (error) throw error;
+}
+
+async function restaurarVersaoDemo({ versaoId, operadorId }) {
+  const { error } = await sb.rpc("demo_restaurar_versao_cliente", { p_versao_id: versaoId, p_gestor_operador_id: operadorId });
   if (error) throw error;
 }
 
@@ -172,6 +237,8 @@ function tempoRelativo(dataIso) {
   return new Date(dataIso).toLocaleDateString("pt-BR");
 }
 
+function rotularCampo(campo) { return ROTULOS_CAMPO[campo] || campo; }
+
 /* ============================================================================
    TOAST
    ============================================================================ */
@@ -225,7 +292,7 @@ function tratarErroOperacao(err) {
     setTimeout(() => abrirModalBloqueado(), 260);
     return;
   }
-  if (msg.toLowerCase().includes("sandbox cheio")) {
+  if (msg.toLowerCase().includes("cheio")) {
     toast(msg, "error");
     return;
   }
@@ -233,9 +300,7 @@ function tratarErroOperacao(err) {
 }
 
 /* ============================================================================
-   STATUS DE CONEXAO / SINCRONIZACAO -- estados claros pedidos na Fase 4:
-   salvando (botao) / atualizando (sync-status) / atualizado (com timestamp
-   real, nunca fake) / erro.
+   STATUS DE CONEXAO / SINCRONIZACAO
    ============================================================================ */
 function setConnStatus(state) {
   connState = state;
@@ -270,7 +335,7 @@ function mostrarSkeletonListas() {
   $("sandbox-ranking").innerHTML = "";
   document.querySelectorAll(".sandbox-kpi").forEach((el) => el.classList.add("skeleton"));
   document.querySelector("#table-demo-clientes tbody").innerHTML =
-    `<tr><td colspan="6" style="color:var(--ink-3)">Carregando clientes do Cadastro...</td></tr>`;
+    `<tr><td colspan="7" style="color:var(--ink-3)">Carregando clientes do Cadastro...</td></tr>`;
   $("demo-clientes-empty").hidden = true;
   $("table-demo-log").innerHTML =
     `<div class="timeline-item"><span class="timeline-when">&nbsp;</span><span class="timeline-dot-col"><span class="timeline-dot"></span></span><span class="timeline-body" style="color:var(--ink-3)">Carregando atividade...</span></div>`;
@@ -279,10 +344,12 @@ function mostrarSkeletonListas() {
 
 function mostrarIndisponivel() {
   document.querySelector("#table-demo-clientes tbody").innerHTML =
-    `<tr><td colspan="6" style="color:var(--ink-3)">Sem conexao com o Cadastro no momento.</td></tr>`;
+    `<tr><td colspan="7" style="color:var(--ink-3)">Sem conexao com o Cadastro no momento.</td></tr>`;
   $("table-demo-log").innerHTML =
     `<div class="timeline-item"><span class="timeline-when">&nbsp;</span><span class="timeline-dot-col"><span class="timeline-dot"></span></span><span class="timeline-body" style="color:var(--ink-3)">Sem conexao com o Cadastro no momento.</span></div>`;
   $("sandbox-ranking").innerHTML = `<p class="empty-state">Sem conexao com o Cadastro no momento.</p>`;
+  $("cadastro-filter-bar").dataset.state = "error";
+  $("cadastro-result-count").textContent = "Erro ao carregar dados";
 }
 
 async function tentarConectar() {
@@ -310,9 +377,10 @@ function atualizarOperador() {
 }
 
 /* ============================================================================
-   AGREGACAO -- pura contagem/media sobre campos JA classificados pela view
-   do banco (pj_distinto/inconsistente_geral/status). Nenhuma regra de
-   negocio e reimplementada aqui.
+   AGREGACAO (KPIs/ranking) -- pura contagem/media sobre campos JA
+   classificados pela view do banco. Roda sobre a lista COMPLETA de clientes
+   ativos (nunca sobre a pagina filtrada da tabela) -- o teto de 200 clientes
+   ativos do Cadastro torna isso barato; ver docs/OPERACAO_CADASTRO.md.
    ============================================================================ */
 function agregarResumoSandbox(clientes) {
   const total = clientes.length;
@@ -343,46 +411,7 @@ function agregarPorGestorSandbox(clientes) {
 }
 
 /* ============================================================================
-   FILTRO DE DRILL-DOWN -- "de onde veio esse numero": clicar num KPI/gestor/
-   vertical filtra a lista de clientes do sandbox para mostrar exatamente
-   quem compoe aquele numero.
-   ============================================================================ */
-function aplicarFiltrosSandbox(clientes) {
-  let resultado = clientes;
-  if (drillDownFiltro) {
-    const { tipo, valor } = drillDownFiltro;
-    resultado = resultado.filter((c) => {
-      if (tipo === "gestor") return c.gestor_id === valor;
-      if (tipo === "vertical") return c.vertical === valor;
-      if (tipo === "pj_distinto") return c.pj_distinto === true;
-      if (tipo === "inconsistente") return c.inconsistente_geral === true;
-      if (tipo === "prioritario") return c.prioritario === true;
-      if (tipo === "respondentes") return c.respondeu === true;
-      return true;
-    });
-  }
-  if (buscaCadastro) {
-    const q = buscaCadastro.toLowerCase();
-    const qDigitos = somenteDigitos(buscaCadastro);
-    resultado = resultado.filter((c) =>
-      c.razao_social.toLowerCase().includes(q) || (qDigitos && somenteDigitos(c.cnpj).includes(qDigitos)));
-  }
-  return resultado;
-}
-
-function definirDrillDownSandbox(tipo, valor, label) {
-  drillDownFiltro = { tipo, valor, label };
-  renderizarSandboxCompleto();
-  $("sandbox-drilldown").scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-function limparDrillDownSandbox() {
-  drillDownFiltro = null;
-  renderizarSandboxCompleto();
-}
-
-/* ============================================================================
-   KPIs DO SANDBOX
+   KPIs
    ============================================================================ */
 function montarKpisSandbox(resumo) {
   document.querySelectorAll(".sandbox-kpi").forEach((el) => el.classList.remove("skeleton"));
@@ -393,6 +422,7 @@ function montarKpisSandbox(resumo) {
     prioritario: fmtInt(resumo.prioritarios),
     respondentes: fmtInt(resumo.respondentes),
     aumento: resumo.media_aumento !== null ? fmtPct(resumo.media_aumento) : "—",
+    gestores: fmtInt(new Set(sandboxClientes.map((c) => c.gestor_id)).size),
   };
   Object.entries(valores).forEach(([chave, texto]) => {
     const tile = document.querySelector(`.sandbox-kpi[data-kpi="${chave}"]`);
@@ -401,7 +431,7 @@ function montarKpisSandbox(resumo) {
 }
 
 /* ============================================================================
-   RANKING (criterio selecionavel) -- clicar num gestor faz drill-down
+   RANKING (criterio selecionavel) -- clicar num gestor filtra a tabela
    ============================================================================ */
 function montarRankingSandbox(clientesFiltrados) {
   const porGestor = agregarPorGestorSandbox(clientesFiltrados);
@@ -414,7 +444,7 @@ function montarRankingSandbox(clientesFiltrados) {
   const ordenado = [...porGestor].sort((a, b) => crit.calc(b) - crit.calc(a)).slice(0, 5);
 
   container.innerHTML = ordenado.map((g, i) => `
-    <div class="ranking-row" data-gestor-id="${g.gestor_id}" tabindex="0" role="button" title="Ver so a carteira de ${g.gestor} no Cadastro">
+    <div class="ranking-row" data-gestor-id="${g.gestor_id}" tabindex="0" role="button" title="Filtrar a tabela pela carteira de ${g.gestor}">
       <span class="ranking-pos">${i + 1}&ordm;</span>
       <span class="ranking-nome">${g.gestor}<span class="ranking-vertical">${g.vertical}</span></span>
       <span class="ranking-valor">${crit.fmt(crit.calc(g))}</span>
@@ -423,7 +453,295 @@ function montarRankingSandbox(clientesFiltrados) {
 }
 
 /* ============================================================================
-   RENDER: clientes do sandbox e atividade recente
+   FILTROS DO CADASTRO -- chips (multi-selecao) + datalist (gestor/municipio)
+   + toggles (prioritario/inconsistente/respondeu). Estado centralizado em
+   cadastroFiltros; toda mudanca chama aplicarFiltrosCadastro(), que refaz a
+   consulta ao banco (nunca filtra em memoria).
+   ============================================================================ */
+function popularFiltrosDinamicos() {
+  const verticais = [...new Set([...gestoresPorId.values()].map((g) => g.vertical))].sort();
+  construirChipsCadastro("cadastro-chips-vertical", verticais, "vertical");
+  construirChipsCadastro("cadastro-chips-status", STATUS_VALORES, "status");
+  construirChipsCadastro("cadastro-chips-porte", PORTE_ORDEM, "porte");
+
+  const municipios = [...new Set(sandboxClientes.map((c) => c.municipio).filter(Boolean))].sort();
+  $("cadastro-municipios-lista").innerHTML = municipios.map((m) => `<option value="${escapeHtml(m)}">`).join("");
+  $("cadastro-gestores-lista").innerHTML = [...gestoresPorId.values()]
+    .map((g) => `<option value="${escapeHtml(g.nome)}">`).join("");
+
+  $("cadastro-filter-bar").dataset.state = "ready";
+}
+
+function construirChipsCadastro(containerId, valores, chave) {
+  const container = $(containerId);
+  container.innerHTML = "";
+  valores.forEach((valor) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip";
+    chip.dataset.value = valor;
+    chip.textContent = valor;
+    chip.addEventListener("click", () => toggleFiltroSetCadastro(chave, valor));
+    container.appendChild(chip);
+  });
+}
+
+function toggleFiltroSetCadastro(chave, valor) {
+  const set = cadastroFiltros[chave];
+  if (set.has(valor)) set.delete(valor); else set.add(valor);
+  cadastroPagina = 1;
+  aplicarFiltrosCadastro();
+}
+
+function toggleFiltroExtraCadastro(chave) {
+  cadastroFiltros[chave] = cadastroFiltros[chave] === true ? null : true;
+  cadastroPagina = 1;
+  aplicarFiltrosCadastro();
+}
+
+function definirFiltroGestorPorNome(nome) {
+  const alvo = nome.trim().toLowerCase();
+  const gestor = [...gestoresPorId.values()].find((g) => g.nome.toLowerCase() === alvo);
+  cadastroFiltros.gestorId = gestor ? gestor.gestor_id : (alvo ? cadastroFiltros.gestorId : null);
+  if (!alvo) cadastroFiltros.gestorId = null;
+  cadastroPagina = 1;
+  aplicarFiltrosCadastro();
+}
+
+function definirFiltroMunicipio(valor) {
+  const alvo = valor.trim();
+  const municipios = new Set(sandboxClientes.map((c) => c.municipio).filter(Boolean));
+  cadastroFiltros.municipio = alvo && municipios.has(alvo) ? alvo : (alvo ? cadastroFiltros.municipio : null);
+  if (!alvo) cadastroFiltros.municipio = null;
+  cadastroPagina = 1;
+  aplicarFiltrosCadastro();
+}
+
+function definirFiltroGestorPorId(gestorId) {
+  cadastroFiltros.gestorId = cadastroFiltros.gestorId === gestorId ? null : gestorId;
+  $("cadastro-filtro-gestor").value = cadastroFiltros.gestorId ? (gestoresPorId.get(cadastroFiltros.gestorId)?.nome || "") : "";
+  cadastroPagina = 1;
+  aplicarFiltrosCadastro();
+  document.getElementById("cadastro-filter-bar").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function limparFiltrosCadastro() {
+  cadastroFiltros.vertical.clear();
+  cadastroFiltros.status.clear();
+  cadastroFiltros.porte.clear();
+  cadastroFiltros.gestorId = null;
+  cadastroFiltros.municipio = null;
+  cadastroFiltros.prioritario = null;
+  cadastroFiltros.inconsistente = null;
+  cadastroFiltros.respondeu = null;
+  $("cadastro-filtro-gestor").value = "";
+  $("cadastro-filtro-municipio").value = "";
+  $("cadastro-busca").value = "";
+  cadastroBusca = "";
+  cadastroPagina = 1;
+  aplicarFiltrosCadastro();
+}
+
+function algumFiltroAtivoCadastro() {
+  const f = cadastroFiltros;
+  return !!(f.vertical.size || f.status.size || f.porte.size || f.gestorId || f.municipio
+    || f.prioritario !== null || f.inconsistente !== null || f.respondeu !== null || cadastroBusca);
+}
+
+function descreverFiltrosAtivosCadastro() {
+  const f = cadastroFiltros;
+  const chips = [];
+  f.vertical.forEach((v) => chips.push({ tipo: "vertical", valor: v, label: v }));
+  f.status.forEach((v) => chips.push({ tipo: "status", valor: v, label: v }));
+  f.porte.forEach((v) => chips.push({ tipo: "porte", valor: v, label: v }));
+  if (f.gestorId) chips.push({ tipo: "gestorId", label: `Gestor: ${gestoresPorId.get(f.gestorId)?.nome || f.gestorId}` });
+  if (f.municipio) chips.push({ tipo: "municipio", label: `Municipio: ${f.municipio}` });
+  if (f.prioritario !== null) chips.push({ tipo: "prioritario", label: "Prioritario" });
+  if (f.inconsistente !== null) chips.push({ tipo: "inconsistente", label: "Inconsistente" });
+  if (f.respondeu !== null) chips.push({ tipo: "respondeu", label: "Respondeu pesquisa" });
+  if (cadastroBusca) chips.push({ tipo: "busca", label: `Busca: "${cadastroBusca}"` });
+  return chips;
+}
+
+function removerFiltroChipCadastro(tipo, valor) {
+  if (tipo === "busca") { $("cadastro-busca").value = ""; cadastroBusca = ""; }
+  else if (["vertical", "status", "porte"].includes(tipo)) cadastroFiltros[tipo].delete(valor);
+  else if (tipo === "gestorId") { cadastroFiltros.gestorId = null; $("cadastro-filtro-gestor").value = ""; }
+  else if (tipo === "municipio") { cadastroFiltros.municipio = null; $("cadastro-filtro-municipio").value = ""; }
+  else cadastroFiltros[tipo] = null;
+  cadastroPagina = 1;
+  aplicarFiltrosCadastro();
+}
+
+function renderizarFiltrosAtivosCadastro() {
+  const chips = descreverFiltrosAtivosCadastro();
+  const wrap = $("cadastro-filtros-ativos");
+  wrap.hidden = !chips.length;
+  $("cadastro-filtros-ativos-lista").innerHTML = chips.map((c) => `
+    <span class="chip-removivel" data-tipo="${c.tipo}" data-valor="${escapeHtml(c.valor ?? "")}">
+      ${escapeHtml(c.label)}
+      <button type="button" aria-label="Remover filtro ${escapeHtml(c.label)}">&times;</button>
+    </span>
+  `).join("");
+
+  document.querySelectorAll("#cadastro-chips-vertical .chip").forEach((el) => el.classList.toggle("is-active", cadastroFiltros.vertical.has(el.dataset.value)));
+  document.querySelectorAll("#cadastro-chips-status .chip").forEach((el) => el.classList.toggle("is-active", cadastroFiltros.status.has(el.dataset.value)));
+  document.querySelectorAll("#cadastro-chips-porte .chip").forEach((el) => el.classList.toggle("is-active", cadastroFiltros.porte.has(el.dataset.value)));
+  document.querySelectorAll("#cadastro-chips-extra .chip").forEach((el) => el.classList.toggle("is-active", cadastroFiltros[el.dataset.extra] === true));
+
+  $("cadastro-filter-clear").hidden = !algumFiltroAtivoCadastro();
+}
+
+function aplicarFiltrosCadastro() {
+  renderizarFiltrosAtivosCadastro();
+  atualizarTabelaCadastro();
+}
+
+/* ============================================================================
+   CONSULTA DA TABELA -- filtros + busca + ordenacao + paginacao aplicados no
+   banco (PostgREST), nunca em memoria. Reaproveitada tambem pela exportacao
+   (sem o .range(), para trazer TODAS as linhas do resultado filtrado).
+   ============================================================================ */
+function construirQueryCadastro() {
+  let query = sb.from("v_demo_clientes_completo").select("*", { count: "exact" });
+  const f = cadastroFiltros;
+  if (f.vertical.size) query = query.in("vertical", [...f.vertical]);
+  if (f.status.size) query = query.in("status", [...f.status]);
+  if (f.porte.size) query = query.in("porte", [...f.porte]);
+  if (f.gestorId) query = query.eq("gestor_id", f.gestorId);
+  if (f.municipio) query = query.eq("municipio", f.municipio);
+  if (f.prioritario !== null) query = query.eq("prioritario", f.prioritario);
+  if (f.inconsistente !== null) query = query.eq("inconsistente_geral", f.inconsistente);
+  if (f.respondeu !== null) query = query.eq("respondeu", f.respondeu);
+
+  const termoOr = construirTermoBuscaCadastro();
+  if (termoOr) query = query.or(termoOr);
+
+  return query;
+}
+
+function construirTermoBuscaCadastro() {
+  if (!cadastroBusca) return null;
+  const limpo = cadastroBusca.replace(/[,()%]/g, " ").trim();
+  if (!limpo) return null;
+  const digitos = somenteDigitos(limpo);
+  const partes = [`razao_social.ilike.%${limpo}%`, `gestor.ilike.%${limpo}%`];
+  if (digitos) partes.push(`cnpj.ilike.%${digitos}%`);
+  return partes.join(",");
+}
+
+async function buscarPaginaCadastro() {
+  const { data, count, error } = await construirQueryCadastro()
+    .order(cadastroOrdenarPor, { ascending: cadastroOrdemAsc, nullsFirst: false })
+    .range((cadastroPagina - 1) * CADASTRO_POR_PAGINA, cadastroPagina * CADASTRO_POR_PAGINA - 1);
+  if (error) throw error;
+  cadastroTabela = { linhas: data || [], total: count || 0 };
+}
+
+async function buscarTodosCadastroParaExportacao() {
+  const { data, error } = await construirQueryCadastro()
+    .order(cadastroOrdenarPor, { ascending: cadastroOrdemAsc, nullsFirst: false });
+  if (error) throw error;
+  return data || [];
+}
+
+async function atualizarTabelaCadastro() {
+  const tbody = document.querySelector("#table-demo-clientes tbody");
+  tbody.innerHTML = `<tr><td colspan="7" style="color:var(--ink-3)">Buscando...</td></tr>`;
+  try {
+    await buscarPaginaCadastro();
+    montarClientesSandbox(cadastroTabela.linhas);
+    renderizarPaginacaoCadastro();
+    renderizarContagemCadastro();
+  } catch (err) {
+    console.error(err);
+    tbody.innerHTML = `<tr><td colspan="7" style="color:var(--ink-3)">Nao foi possivel buscar os clientes.</td></tr>`;
+    toast("Nao foi possivel aplicar os filtros agora.", "error");
+  }
+}
+
+function renderizarContagemCadastro() {
+  const total = sandboxClientes.length;
+  const filtrado = cadastroTabela.total;
+  const texto = algumFiltroAtivoCadastro()
+    ? `${fmtInt(filtrado)} de ${fmtInt(total)} clientes`
+    : `${fmtInt(total)} clientes`;
+  $("cadastro-contagem").textContent = texto;
+  $("cadastro-result-count").textContent = texto;
+}
+
+function renderizarPaginacaoCadastro() {
+  const totalPaginas = Math.max(1, Math.ceil(cadastroTabela.total / CADASTRO_POR_PAGINA));
+  if (cadastroPagina > totalPaginas) cadastroPagina = totalPaginas;
+  const pager = $("cadastro-pager");
+  pager.innerHTML = `
+    <button id="cadastro-pg-prev" ${cadastroPagina <= 1 ? "disabled" : ""}>&larr; Anterior</button>
+    <span>Pagina ${cadastroPagina} de ${totalPaginas} &middot; ${fmtInt(cadastroTabela.total)} clientes</span>
+    <button id="cadastro-pg-next" ${cadastroPagina >= totalPaginas ? "disabled" : ""}>Proxima &rarr;</button>
+  `;
+  $("cadastro-pg-prev")?.addEventListener("click", () => { cadastroPagina--; atualizarTabelaCadastro(); });
+  $("cadastro-pg-next")?.addEventListener("click", () => { cadastroPagina++; atualizarTabelaCadastro(); });
+}
+
+/* ============================================================================
+   EXPORTACAO -- respeita filtros/busca/ordenacao ativos (mesma consulta da
+   tabela, sem paginacao), com confirmacao da quantidade real antes de gerar
+   o arquivo.
+   ============================================================================ */
+async function exportarCadastroXLSX() {
+  if (typeof XLSX === "undefined") { toast("Biblioteca de exportacao nao carregou.", "error"); return; }
+  if (connState !== "online") { toast("Cadastro indisponivel no momento.", "error"); return; }
+
+  const btn = $("cadastro-exportar");
+  const textoOriginal = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Buscando...";
+  try {
+    const linhas = await buscarTodosCadastroParaExportacao();
+    btn.disabled = false;
+    btn.textContent = textoOriginal;
+
+    const confirmou = window.confirm(`${linhas.length} clientes serao exportados (filtros e ordenacao atuais aplicados). Continuar?`);
+    if (!confirmou) return;
+
+    const dados = linhas.map((c) => ({
+      "Cliente": c.razao_social, "CNPJ": c.cnpj, "Porte": c.porte, "Gestor": c.gestor, "Vertical": c.vertical,
+      "Municipio": c.municipio || "", "Status": c.status, "Prioritario": c.prioritario ? "Sim" : "Nao",
+      "Inconsistente": c.inconsistente_geral ? "Sim" : "Nao", "Respondeu pesquisa": c.respondeu ? "Sim" : "Nao",
+      "% Aumento de faturamento": c.aumento_faturamento_pct ?? "",
+      "Data de inclusao": new Date(c.criado_em).toLocaleString("pt-BR"),
+      "Ultima atualizacao": new Date(c.atualizado_em).toLocaleString("pt-BR"),
+    }));
+
+    const cabecalho = [
+      ["Cadastro -- Jornada do Cliente -- Exportacao"],
+      [`Gerado em: ${new Date().toLocaleString("pt-BR")}`],
+      [`Filtros aplicados: ${descreverFiltrosAtivosCadastro().map((c) => c.label).join(" | ") || "Nenhum (base completa)"}`],
+      [`Ordenado por: ${OPCOES_ORDENACAO.find((o) => o.value === cadastroOrdenarPor)?.label || cadastroOrdenarPor} (${cadastroOrdemAsc ? "ascendente" : "descendente"})`],
+      [`Total exportado: ${dados.length}`],
+      [],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(cabecalho);
+    XLSX.utils.sheet_add_json(ws, dados, { origin: `A${cabecalho.length + 1}` });
+    ws["!cols"] = [{ wch: 32 }, { wch: 18 }, { wch: 20 }, { wch: 20 }, { wch: 24 }, { wch: 18 }, { wch: 16 }, { wch: 11 }, { wch: 13 }, { wch: 16 }, { wch: 18 }, { wch: 18 }, { wch: 18 }];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Cadastro");
+    const pad = (n) => String(n).padStart(2, "0");
+    const d = new Date();
+    XLSX.writeFile(wb, `Cadastro_JornadaCliente_${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.xlsx`);
+    toast(`${dados.length} clientes exportados.`, "success");
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = textoOriginal;
+    console.error(err);
+    toast("Nao foi possivel exportar agora.", "error");
+  }
+}
+
+/* ============================================================================
+   RENDER: tabela de clientes do Cadastro (pagina atual, ja filtrada/ordenada
+   no banco) e atividade recente
    ============================================================================ */
 function montarClientesSandbox(clientes, highlightId) {
   const tbody = document.querySelector("#table-demo-clientes tbody");
@@ -448,9 +766,24 @@ function montarClientesSandbox(clientes, highlightId) {
     tdStatus.appendChild(badge);
     tr.appendChild(tdStatus);
 
+    const tdPrioridade = document.createElement("td");
+    if (c.prioritario) {
+      const badgePrio = document.createElement("span");
+      badgePrio.className = "badge badge-insert";
+      badgePrio.textContent = "Prioritario";
+      tdPrioridade.appendChild(badgePrio);
+    } else {
+      tdPrioridade.textContent = "—";
+      tdPrioridade.style.color = "var(--ink-3)";
+    }
+    tr.appendChild(tdPrioridade);
+
     const tdActions = document.createElement("td");
     const wrap = document.createElement("div");
     wrap.className = "row-actions";
+    const btnHist = document.createElement("button");
+    btnHist.type = "button"; btnHist.className = "btn-icon"; btnHist.textContent = "Historico";
+    btnHist.addEventListener("click", () => abrirModalHistorico(c));
     const btnAtend = document.createElement("button");
     btnAtend.type = "button"; btnAtend.className = "btn-icon"; btnAtend.textContent = "Atendimentos";
     btnAtend.addEventListener("click", () => abrirModalAtendimento(c));
@@ -460,7 +793,7 @@ function montarClientesSandbox(clientes, highlightId) {
     const btnDel = document.createElement("button");
     btnDel.type = "button"; btnDel.className = "btn-icon danger"; btnDel.textContent = "Excluir";
     btnDel.addEventListener("click", () => abrirModalExcluir(c));
-    wrap.append(btnAtend, btnEdit, btnDel);
+    wrap.append(btnHist, btnAtend, btnEdit, btnDel);
     tdActions.appendChild(wrap);
     tr.appendChild(tdActions);
 
@@ -481,14 +814,14 @@ function montarLogSandbox(logs) {
   if (!logs.length) { emptyState.hidden = false; return; }
   emptyState.hidden = true;
 
-  const rotulo = { INSERT: "incluiu", UPDATE: "editou", DELETE: "excluiu", ATENDIMENTO: "atualizou atendimento de", IMPORT: "importou" };
-  const classeDot = { INSERT: "insert", UPDATE: "update", DELETE: "delete", ATENDIMENTO: "update", IMPORT: "insert" };
+  const rotulo = { INSERT: "incluiu", UPDATE: "editou", DELETE: "excluiu", ATENDIMENTO: "atualizou atendimento de", IMPORT: "importou", RESTORE: "restaurou versao de" };
+  const classeDot = { INSERT: "insert", UPDATE: "update", DELETE: "delete", ATENDIMENTO: "update", IMPORT: "insert", RESTORE: "update" };
 
   logs.forEach((l, i) => {
     const gestor = gestoresPorId.get(l.gestor_operador_id);
     const nomeGestor = gestor ? escapeHtml(gestor.nome) : `Gestor #${l.gestor_operador_id}`;
     const detalhe = l.campo
-      ? `<div class="timeline-meta">${escapeHtml(l.campo)}${l.valor_novo ? `: ${l.valor_antigo ? escapeHtml(l.valor_antigo) + " &rarr; " : ""}${escapeHtml(l.valor_novo)}` : ""}</div>`
+      ? `<div class="timeline-meta">${escapeHtml(rotularCampo(l.campo))}${l.valor_novo ? `: ${l.valor_antigo ? escapeHtml(l.valor_antigo) + " &rarr; " : ""}${escapeHtml(l.valor_novo)}` : ""}</div>`
       : "";
     const item = document.createElement("div");
     item.className = "timeline-item";
@@ -503,18 +836,173 @@ function montarLogSandbox(logs) {
 }
 
 /* ============================================================================
+   HISTORICO E VERSOES (por cliente) -- ETAPA 2
+   ============================================================================ */
+async function abrirModalHistorico(cliente) {
+  clienteHistoricoAtual = cliente;
+  $("historico-cliente-nome").textContent = cliente.razao_social;
+  mostrarAbaHistorico("timeline");
+  $("historico-timeline").innerHTML = `<p class="empty-state">Carregando...</p>`;
+  $("historico-timeline-empty").hidden = true;
+  $("historico-versoes-lista").innerHTML = "";
+  $("historico-versoes-empty").hidden = true;
+  $("historico-restaurar-diff").hidden = true;
+  abrirModal("modal-historico");
+
+  try {
+    const [logRes, versoesRes] = await Promise.all([
+      sb.from("demo_log").select("*").eq("cliente_id", cliente.id).order("criado_em", { ascending: false }),
+      sb.from("demo_clientes_versoes").select("*").eq("cliente_id", cliente.id).order("versao", { ascending: false }),
+    ]);
+    if (logRes.error) throw logRes.error;
+    if (versoesRes.error) throw versoesRes.error;
+    renderizarHistoricoTimeline(logRes.data || []);
+    versoesHistoricoAtual = versoesRes.data || [];
+    renderizarHistoricoVersoes(versoesHistoricoAtual);
+  } catch (err) {
+    console.error(err);
+    $("historico-timeline").innerHTML = `<p class="empty-state">Nao foi possivel carregar o historico deste cliente.</p>`;
+  }
+}
+
+function mostrarAbaHistorico(aba) {
+  document.querySelectorAll(".historico-tab").forEach((t) => t.classList.toggle("is-active", t.dataset.historicoTab === aba));
+  $("historico-painel-timeline").hidden = aba !== "timeline";
+  $("historico-painel-versoes").hidden = aba !== "versoes";
+}
+
+function rotularValorCampo(campo, valor) {
+  if (valor === null || valor === undefined || valor === "") return null;
+  if (campo === "gestor_id") return gestoresPorId.get(Number(valor))?.nome || valor;
+  if (["ali", "respondeu", "termo", "whatsapp_atualizado", "email_atualizado"].includes(campo)) {
+    return valor === "true" || valor === true ? "Sim" : "Nao";
+  }
+  return valor;
+}
+
+function renderizarHistoricoTimeline(logs) {
+  const container = $("historico-timeline");
+  const empty = $("historico-timeline-empty");
+  if (!logs.length) { container.innerHTML = ""; empty.hidden = false; return; }
+  empty.hidden = true;
+
+  const rotuloOp = { INSERT: "incluiu o cliente", UPDATE: "editou", DELETE: "excluiu o cliente", ATENDIMENTO: "atualizou atendimento", IMPORT: "importou o cliente", RESTORE: "restaurou uma versao" };
+  const classeDot = { INSERT: "insert", UPDATE: "update", DELETE: "delete", ATENDIMENTO: "update", IMPORT: "insert", RESTORE: "update" };
+
+  container.innerHTML = logs.map((l) => {
+    const gestor = gestoresPorId.get(l.gestor_operador_id);
+    const nomeGestor = gestor ? escapeHtml(gestor.nome) : `Gestor #${l.gestor_operador_id}`;
+    const antigo = rotularValorCampo(l.campo, l.valor_antigo);
+    const novo = rotularValorCampo(l.campo, l.valor_novo);
+    const detalhe = l.campo
+      ? `<div class="timeline-meta">${escapeHtml(rotularCampo(l.campo))}${novo !== null ? `: ${antigo !== null ? escapeHtml(String(antigo)) + " &rarr; " : ""}${escapeHtml(String(novo))}` : ""}</div>`
+      : "";
+    return `
+      <div class="timeline-item">
+        <span class="timeline-when" title="${new Date(l.criado_em).toLocaleString("pt-BR")}">${tempoRelativo(l.criado_em)}</span>
+        <span class="timeline-dot-col"><span class="timeline-dot ${classeDot[l.operacao] || ""}"></span></span>
+        <span class="timeline-body"><strong>${nomeGestor}</strong> ${rotuloOp[l.operacao] || l.operacao}${detalhe}</span>
+      </div>`;
+  }).join("");
+}
+
+function renderizarHistoricoVersoes(versoes) {
+  const container = $("historico-versoes-lista");
+  const empty = $("historico-versoes-empty");
+  $("historico-restaurar-diff").hidden = true;
+  if (!versoes.length) { container.innerHTML = ""; empty.hidden = false; return; }
+  empty.hidden = true;
+
+  const rotuloOp = { INSERT: "criacao", UPDATE: "edicao", RESTORE: "restauracao" };
+  container.innerHTML = versoes.map((v, i) => {
+    const gestor = gestoresPorId.get(v.gestor_operador_id);
+    return `
+      <div class="historico-versao-item ${i === 0 ? "is-atual" : ""}">
+        <span class="historico-versao-meta">
+          <strong>Versao ${v.versao}</strong>${i === 0 ? '<span class="historico-versao-tag">atual</span>' : ""}
+          &middot; ${rotuloOp[v.operacao] || v.operacao} por ${gestor ? escapeHtml(gestor.nome) : `#${v.gestor_operador_id}`}
+          &middot; ${new Date(v.criado_em).toLocaleString("pt-BR")}
+        </span>
+        ${i === 0 ? "" : `<button type="button" class="btn btn-ghost btn-sm" data-restaurar-versao="${v.id}">Restaurar esta versao</button>`}
+      </div>`;
+  }).join("");
+}
+
+function mostrarDiffRestauracao(versaoId) {
+  const versao = versoesHistoricoAtual.find((v) => v.id === versaoId);
+  if (!versao || !clienteHistoricoAtual) return;
+  const atual = clienteHistoricoAtual;
+  const snap = versao.snapshot;
+  const campos = ["razao_social", "porte", "gestor_id", "municipio", "ali", "observacoes", "respondeu", "aumento_faturamento_pct"];
+
+  const linhas = campos.filter((campo) => {
+    const vAtual = campo === "gestor_id" ? atual.gestor_id : atual[campo];
+    const vSnap = campo === "gestor_id" ? Number(snap.gestor_id) : snap[campo];
+    return String(vAtual ?? "") !== String(vSnap ?? "");
+  }).map((campo) => {
+    let vAtualFmt = atual[campo];
+    let vSnapFmt = snap[campo];
+    if (campo === "gestor_id") {
+      vAtualFmt = gestoresPorId.get(atual.gestor_id)?.nome || atual.gestor_id;
+      vSnapFmt = gestoresPorId.get(Number(snap.gestor_id))?.nome || snap.gestor_id;
+    } else if (campo === "ali" || campo === "respondeu") {
+      vAtualFmt = vAtualFmt ? "Sim" : "Nao";
+      vSnapFmt = vSnapFmt ? "Sim" : "Nao";
+    }
+    return `<div class="historico-diff-campo">
+      <span class="nome">${rotularCampo(campo)}</span>
+      <span class="atual">Atual: ${escapeHtml(vAtualFmt ?? "--")}</span>
+      <span class="anterior">Nessa versao: ${escapeHtml(vSnapFmt ?? "--")}</span>
+    </div>`;
+  }).join("");
+
+  $("historico-diff-campos").innerHTML = linhas || `<p class="empty-state">Nenhuma diferenca de campo detectada em relacao ao estado atual.</p>`;
+  const diffEl = $("historico-restaurar-diff");
+  diffEl.hidden = false;
+  diffEl.dataset.versaoId = String(versaoId);
+  diffEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+async function onConfirmarRestauracao() {
+  const diffEl = $("historico-restaurar-diff");
+  const versaoId = Number(diffEl.dataset.versaoId);
+  if (!versaoId || !clienteHistoricoAtual) return;
+  if (connState !== "online") { toast("Cadastro indisponivel no momento.", "error"); return; }
+
+  const btn = $("historico-restaurar-confirmar");
+  setButtonState(btn, "loading", { loadingLabel: "Restaurando..." });
+  const clienteId = clienteHistoricoAtual.id;
+  try {
+    await restaurarVersaoDemo({ versaoId, operadorId: Number($("demo-gestor-atual").value) });
+    setButtonState(btn, "default");
+    toast("Versao restaurada -- uma nova versao foi criada no historico.", "success");
+    fecharModal();
+    await recarregarSandboxEAtualizarTudo({ highlightClienteId: clienteId, highlightLog: true });
+  } catch (err) {
+    setButtonState(btn, "default");
+    tratarErroOperacao(err);
+  }
+}
+
+/* ============================================================================
    PIPELINE CENTRAL -- unico caminho de atualizacao. Chamado sempre apos
-   qualquer INSERT/UPDATE/DELETE/ATENDIMENTO com sucesso, e no load inicial.
-   Nunca exige F5: reconsulta a fonte, recalcula (na verdade so agrega o que
-   o banco ja calculou) e re-renderiza TUDO que depende de clientes do
-   sandbox (KPIs, ranking, tabela, timestamp) numa unica passada.
+   qualquer escrita com sucesso, e no load inicial. Nunca exige F5: recarrega
+   a lista completa (KPIs/ranking/log/datalists) e a pagina atual da tabela.
    ============================================================================ */
 async function recarregarSandboxEAtualizarTudo({ highlightClienteId, highlightLog } = {}) {
   setSyncStatus("updating");
   highlightFirstLog = !!highlightLog;
   try {
     await carregarSandboxCompleto();
-    renderizarSandboxCompleto(highlightClienteId);
+    montarKpisSandbox(agregarResumoSandbox(sandboxClientes));
+    montarRankingSandbox(sandboxClientes);
+    montarLogSandbox(sandboxLogs);
+    renderizarFiltrosAtivosCadastro();
+    await atualizarTabelaCadastro();
+    if (highlightClienteId) {
+      const row = document.querySelector(`#table-demo-clientes tr[data-id="${highlightClienteId}"]`);
+      if (row) { row.classList.add("is-new"); setTimeout(() => row.classList.remove("is-new"), 1000); }
+    }
     ultimaSincronizacao = new Date();
     setSyncStatus("updated");
     atualizarUltimaAtualizacaoTexto();
@@ -524,19 +1012,9 @@ async function recarregarSandboxEAtualizarTudo({ highlightClienteId, highlightLo
   }
 }
 
-function renderizarSandboxCompleto(highlightClienteId) {
-  const filtrados = aplicarFiltrosSandbox(sandboxClientes);
-  $("sandbox-drilldown").hidden = !drillDownFiltro;
-  if (drillDownFiltro) $("sandbox-drilldown-label").textContent = drillDownFiltro.label;
-
-  montarKpisSandbox(agregarResumoSandbox(sandboxClientes)); // KPIs sempre sobre o total, drill-down so filtra a lista
-  montarRankingSandbox(sandboxClientes);
-  montarClientesSandbox(filtrados, highlightClienteId);
-  montarLogSandbox(sandboxLogs);
-}
-
 /* ============================================================================
-   VALIDACAO -- inclusao
+   VALIDACAO -- inclusao + deteccao de duplicidade (nao bloqueia, so avisa --
+   quem decide se e duplicidade real e o gestor)
    ============================================================================ */
 function atualizarValidacaoInclusao() {
   const btn = $("demo-submit");
@@ -557,6 +1035,42 @@ function atualizarValidacaoInclusao() {
   btn.disabled = !ok || connState !== "online";
   return ok;
 }
+
+const verificarDuplicidadeInclusao = debounce(async () => {
+  const aviso = $("cadastro-duplicidade-aviso");
+  if (connState !== "online") { aviso.hidden = true; return; }
+
+  const cnpjDigits = somenteDigitos($("demo-cnpj").value);
+  const razao = $("demo-razao-social").value.trim();
+
+  try {
+    if (cnpjDigits.length === CNPJ_LEN) {
+      const { data, error } = await sb.from("v_demo_clientes_completo")
+        .select("razao_social,gestor,vertical,status,criado_em").eq("cnpj", cnpjDigits).limit(1);
+      if (!error && data && data.length) {
+        const c = data[0];
+        aviso.dataset.nivel = "bloqueio";
+        aviso.innerHTML = `<strong>Este cliente ja esta cadastrado.</strong><br>${escapeHtml(c.razao_social)} &mdash; gestor ${escapeHtml(c.gestor)} (${escapeHtml(c.vertical)}), status ${escapeHtml(c.status)}, incluido em ${new Date(c.criado_em).toLocaleDateString("pt-BR")}.`;
+        aviso.hidden = false;
+        return;
+      }
+    }
+    if (razao.length >= 3) {
+      const { data, error } = await sb.from("v_demo_clientes_completo")
+        .select("razao_social,gestor,vertical").ilike("razao_social", razao).limit(1);
+      if (!error && data && data.length) {
+        const c = data[0];
+        aviso.dataset.nivel = "aviso";
+        aviso.innerHTML = `<strong>Cliente potencialmente duplicado.</strong><br>Ja existe "${escapeHtml(c.razao_social)}" com gestor ${escapeHtml(c.gestor)} (${escapeHtml(c.vertical)}) &mdash; confira antes de continuar.`;
+        aviso.hidden = false;
+        return;
+      }
+    }
+    aviso.hidden = true;
+  } catch (err) {
+    console.error(err);
+  }
+}, 450);
 
 /* ============================================================================
    MODAIS
@@ -586,6 +1100,7 @@ function fecharModal() {
   clienteEmEdicao = null;
   clienteParaExcluir = null;
   clienteParaAtendimento = null;
+  clienteHistoricoAtual = null;
 }
 
 function onModalKeydown(e) {
@@ -615,9 +1130,10 @@ function abrirModalInfo(chave) {
     total: "Total de clientes ativos no Cadastro (excluidos nao contam).",
     pj_distinto: "Clientes concluintes -- >=1 diagnostico valido + 2 assessorias validas, OU >=1 atendimento Sebraetec valido -- em pelo menos um Centro de Custo. Mesma regra de sql/queries.sql, calculada em v_demo_classificacao_cc.",
     inconsistente: "Clientes que seriam concluintes se os atendimentos lancados fossem validos, mas nao sao (dado invalido na fonte). Tratado separado da conclusao -- nunca reduz o PJ Distinto de outro cliente.",
-    prioritario: "Clientes marcados manualmente como prioritarios pelo gestor responsavel, via edicao do cadastro.",
+    prioritario: "Calculado (nunca marcado manualmente): respondeu a pesquisa, informou aumento de faturamento, e AINDA NAO e Concluinte. Assim que completar a regra de conclusao, deixa de ser prioritario e passa a ser Concluinte. Ver docs/AUDITORIA_E_VERSIONAMENTO.md.",
     respondentes: "Clientes que responderam a pesquisa de acompanhamento (campo 'respondeu').",
     aumento: "Media do percentual de aumento de faturamento informado, calculada apenas entre quem respondeu a pesquisa.",
+    gestores: "Numero de gestores distintos com pelo menos 1 cliente ativo no Cadastro.",
   };
   abrirModal("modal-info", { onOpen: () => { $("modal-info-texto").textContent = textos[chave] || "Sem descricao disponivel."; } });
 }
@@ -631,12 +1147,11 @@ function abrirModalEditar(cliente) {
       $("editar-porte").value = cliente.porte;
       $("editar-municipio").value = cliente.municipio || "";
       $("editar-ali").checked = !!cliente.ali;
-      $("editar-prioritario").checked = !!cliente.prioritario;
       $("editar-respondeu").checked = !!cliente.respondeu;
       $("editar-aumento").value = cliente.aumento_faturamento_pct ?? "";
       $("editar-aumento-wrap").hidden = !cliente.respondeu;
       $("editar-observacoes").value = cliente.observacoes || "";
-      $("editar-gestor-nome").textContent = gestor ? gestor.nome : `#${cliente.gestor_id}`;
+      $("editar-gestor-input").value = gestor ? gestor.nome : "";
       $("editar-gestor-vertical").textContent = gestor ? gestor.vertical : "--";
       setFieldError("editar-razao-social", "erro-editar-razao-social", "");
       setButtonState($("editar-submit"), "default");
@@ -738,7 +1253,6 @@ function coletarExtraInclusao() {
   return {
     municipio: $("demo-municipio").value.trim() || null,
     ali: $("demo-ali").checked,
-    prioritario: $("demo-prioritario").checked,
     observacoes: $("demo-observacoes").value.trim() || null,
     respondeu,
     aumento_faturamento_pct: respondeu && $("demo-aumento").value !== "" ? Number($("demo-aumento").value) : null,
@@ -768,11 +1282,11 @@ async function onSubmitIncluir(e) {
     $("demo-porte").value = "MEI";
     $("demo-municipio").value = "";
     $("demo-ali").checked = false;
-    $("demo-prioritario").checked = false;
     $("demo-respondeu").checked = false;
     $("demo-aumento").value = "";
     $("demo-observacoes").value = "";
     $("demo-aumento-wrap").hidden = true;
+    $("cadastro-duplicidade-aviso").hidden = true;
     await recarregarSandboxEAtualizarTudo({ highlightClienteId: novoId, highlightLog: true });
     setTimeout(() => { setButtonState(btn, "default"); atualizarValidacaoInclusao(); }, 1400);
   } catch (err) {
@@ -798,7 +1312,6 @@ async function onSubmitEditar(e) {
     porte: $("editar-porte").value,
     municipio: $("editar-municipio").value.trim() || null,
     ali: $("editar-ali").checked,
-    prioritario: $("editar-prioritario").checked,
     observacoes: $("editar-observacoes").value.trim() || null,
     respondeu,
     aumento_faturamento_pct: respondeu && $("editar-aumento").value !== "" ? Number($("editar-aumento").value) : null,
@@ -811,17 +1324,22 @@ async function onSubmitEditar(e) {
     if (String(original) !== String(comparavel)) campos[chave] = comparavel;
   });
 
-  const btn = $("editar-submit");
-  if (!Object.keys(campos).length) { fecharModal(); return; }
+  const nomeGestorDigitado = $("editar-gestor-input").value.trim().toLowerCase();
+  const novoGestor = [...gestoresPorId.values()].find((g) => g.nome.toLowerCase() === nomeGestorDigitado);
+  const reatribuir = novoGestor && novoGestor.gestor_id !== clienteEmEdicao.gestor_id ? novoGestor.gestor_id : null;
 
+  if (!Object.keys(campos).length && !reatribuir) { fecharModal(); return; }
+
+  const btn = $("editar-submit");
   setButtonState(btn, "loading", { loadingLabel: "Salvando..." });
   const operadorId = Number($("demo-gestor-atual").value);
   const idEditado = clienteEmEdicao.id;
 
   try {
-    await editarClienteDemo({ clienteId: idEditado, operadorId, campos });
+    if (Object.keys(campos).length) await editarClienteDemo({ clienteId: idEditado, operadorId, campos });
+    if (reatribuir) await reatribuirGestorDemo({ clienteId: idEditado, operadorId, novoGestorId: reatribuir });
     setButtonState(btn, "success", { successLabel: "Salvo" });
-    toast("Alteracao salva.", "success");
+    toast(reatribuir ? "Alteracoes salvas -- gestor reatribuido." : "Alteracao salva.", "success");
     setTimeout(async () => {
       fecharModal();
       await recarregarSandboxEAtualizarTudo({ highlightClienteId: idEditado, highlightLog: true });
@@ -857,9 +1375,6 @@ async function onClickExcluir() {
 /* ============================================================================
    IMPORTACAO EM MASSA (XLSX) -- reaproveita a MESMA RPC demo_incluir_cliente
    (mesma validacao/limite/permissao de uma inclusao manual), so em lote.
-   Nao mexe no schema: campos fora do que demo_incluir_cliente ja aceita
-   (cpf/celular/termo/etc) ficam de fora do modelo, editaveis depois um a um
-   pelo modal "Editar".
    ============================================================================ */
 let importacaoValidada = [];
 
@@ -883,7 +1398,7 @@ function baixarModeloXLSX() {
     [],
     ["Campos opcionais:"],
     ["  Municipio, Observacoes"],
-    ["  ALI, Prioritario, Pesquisa respondida -- preencher com Sim ou Nao (em branco = Nao)"],
+    ["  ALI, Pesquisa respondida -- preencher com Sim ou Nao (em branco = Nao)"],
     ["  % Aumento de faturamento -- numero; so e gravado se 'Pesquisa respondida' = Sim"],
     [],
     ["Gestores disponiveis:"],
@@ -892,6 +1407,7 @@ function baixarModeloXLSX() {
     ["Campos calculados automaticamente pelo sistema (nao preencher aqui):"],
     ["  Status, PJ Distinto, Inconsistencias -- dependem dos Atendimentos por Centro de Custo,"],
     ["  que sao definidos depois da importacao, cliente por cliente, no botao 'Atendimentos'."],
+    ["  Prioridade -- calculada automaticamente (aumento de faturamento informado e ainda nao Concluinte)."],
     [],
     ["Outros campos do cadastro (CPF, Celular, Termo, WhatsApp/E-mail atualizado, Data da"],
     ["pesquisa) existem no sistema mas nao fazem parte deste modelo de importacao em massa --"],
@@ -907,13 +1423,12 @@ function baixarModeloXLSX() {
     "Porte": "ME",
     "Municipio": "Sao Paulo",
     "ALI": "Nao",
-    "Prioritario": "Nao",
     "Pesquisa respondida": "Sim",
     "% Aumento de faturamento": 15.5,
     "Observacoes": "",
   }];
   const wsClientes = XLSX.utils.json_to_sheet(exemplo);
-  wsClientes["!cols"] = [{ wch: 20 }, { wch: 30 }, { wch: 18 }, { wch: 8 }, { wch: 18 }, { wch: 8 }, { wch: 11 }, { wch: 18 }, { wch: 22 }, { wch: 30 }];
+  wsClientes["!cols"] = [{ wch: 20 }, { wch: 30 }, { wch: 18 }, { wch: 8 }, { wch: 18 }, { wch: 8 }, { wch: 18 }, { wch: 22 }, { wch: 30 }];
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, wsInstrucoes, "Instrucoes");
@@ -947,7 +1462,6 @@ function processarImportacao(linhasBrutas) {
     const municipio = String(acharColuna(linha, "Municipio", "Município")).trim();
     const observacoes = String(acharColuna(linha, "Observacoes", "Observações")).trim();
     const ali = normalizarBooleanoImportacao(acharColuna(linha, "ALI"));
-    const prioritario = normalizarBooleanoImportacao(acharColuna(linha, "Prioritario", "Prioritário"));
     const respondeu = normalizarBooleanoImportacao(acharColuna(linha, "Pesquisa respondida"));
     const aumentoRaw = acharColuna(linha, "% Aumento de faturamento", "% Aumento");
     const aumento = aumentoRaw === "" ? null : Number(aumentoRaw);
@@ -968,7 +1482,7 @@ function processarImportacao(linhasBrutas) {
 
     return {
       linha: numeroLinha, razaoSocial, cnpjDigits, porte, gestorId: gestor?.gestor_id, gestorNome,
-      municipio, observacoes, ali, prioritario, respondeu, aumento,
+      municipio, observacoes, ali, respondeu, aumento,
       valido: erros.length === 0, duplicado, erros,
     };
   });
@@ -1047,7 +1561,7 @@ async function onConfirmarImportacao() {
       await incluirClienteDemo({
         gestorId: r.gestorId, razaoSocial: r.razaoSocial, cnpj: r.cnpjDigits, porte: r.porte,
         extra: {
-          municipio: r.municipio || null, ali: r.ali, prioritario: r.prioritario,
+          municipio: r.municipio || null, ali: r.ali,
           observacoes: r.observacoes || null, respondeu: r.respondeu,
           aumento_faturamento_pct: r.respondeu ? r.aumento : null,
         },
@@ -1074,8 +1588,12 @@ function wireEstatico() {
   $("demo-cnpj").addEventListener("input", () => {
     $("demo-cnpj").value = formatarCNPJ(somenteDigitos($("demo-cnpj").value));
     atualizarValidacaoInclusao();
+    verificarDuplicidadeInclusao();
   });
-  $("demo-razao-social").addEventListener("input", atualizarValidacaoInclusao);
+  $("demo-razao-social").addEventListener("input", () => {
+    atualizarValidacaoInclusao();
+    verificarDuplicidadeInclusao();
+  });
   $("demo-gestor-atual").addEventListener("change", atualizarOperador);
   $("demo-respondeu").addEventListener("change", () => { $("demo-aumento-wrap").hidden = !$("demo-respondeu").checked; });
   $("demo-form").addEventListener("submit", onSubmitIncluir);
@@ -1087,6 +1605,9 @@ function wireEstatico() {
   $("editar-respondeu").addEventListener("change", () => { $("editar-aumento-wrap").hidden = !$("editar-respondeu").checked; });
   $("form-editar").addEventListener("submit", onSubmitEditar);
   $("excluir-confirmar").addEventListener("click", onClickExcluir);
+  $("editar-ver-historico").addEventListener("click", () => {
+    if (clienteEmEdicao) abrirModalHistorico(clienteEmEdicao);
+  });
 
   document.querySelectorAll("[data-modal-close]").forEach((b) => b.addEventListener("click", fecharModal));
   $("modal-overlay").addEventListener("click", (e) => { if (e.target === $("modal-overlay")) fecharModal(); });
@@ -1097,6 +1618,7 @@ function wireEstatico() {
   $("sandbox-importar-abrir").addEventListener("click", () => $("sandbox-importar-arquivo").click());
   $("sandbox-importar-arquivo").addEventListener("change", onArquivoImportacaoSelecionado);
   $("importar-confirmar").addEventListener("click", onConfirmarImportacao);
+  $("cadastro-exportar").addEventListener("click", exportarCadastroXLSX);
 
   $("sandbox-ranking-criterio").addEventListener("change", (e) => {
     criterioRanking = e.target.value;
@@ -1105,29 +1627,71 @@ function wireEstatico() {
 
   $("sandbox-ranking").addEventListener("click", (e) => {
     const row = e.target.closest(".ranking-row[data-gestor-id]");
-    if (row) definirDrillDownSandbox("gestor", Number(row.dataset.gestorId), `carteira de ${gestoresPorId.get(Number(row.dataset.gestorId))?.nome || "gestor"}`);
+    if (row) definirFiltroGestorPorId(Number(row.dataset.gestorId));
   });
   $("sandbox-ranking").addEventListener("keydown", (e) => {
     if (e.key !== "Enter" && e.key !== " ") return;
     const row = e.target.closest(".ranking-row[data-gestor-id]");
-    if (row) { e.preventDefault(); definirDrillDownSandbox("gestor", Number(row.dataset.gestorId), `carteira de ${gestoresPorId.get(Number(row.dataset.gestorId))?.nome || "gestor"}`); }
+    if (row) { e.preventDefault(); definirFiltroGestorPorId(Number(row.dataset.gestorId)); }
   });
 
-  $("sandbox-drilldown-clear").addEventListener("click", limparDrillDownSandbox);
-
-  $("cadastro-busca").addEventListener("input", () => {
-    buscaCadastro = $("cadastro-busca").value.trim();
-    renderizarSandboxCompleto();
+  // Filtros do Cadastro
+  $("cadastro-filter-clear").addEventListener("click", limparFiltrosCadastro);
+  $("cadastro-chips-extra").addEventListener("click", (e) => {
+    const btn = e.target.closest(".chip[data-extra]");
+    if (btn) toggleFiltroExtraCadastro(btn.dataset.extra);
   });
+  $("cadastro-filtro-gestor").addEventListener("input", debounce((e) => definirFiltroGestorPorNome(e.target.value), 300));
+  $("cadastro-filtro-municipio").addEventListener("input", debounce((e) => definirFiltroMunicipio(e.target.value), 300));
+  $("cadastro-filtros-ativos-lista").addEventListener("click", (e) => {
+    const chip = e.target.closest(".chip-removivel");
+    if (chip && e.target.tagName === "BUTTON") removerFiltroChipCadastro(chip.dataset.tipo, chip.dataset.valor);
+  });
+
+  $("cadastro-busca").addEventListener("input", debounce((e) => {
+    cadastroBusca = e.target.value.trim();
+    cadastroPagina = 1;
+    aplicarFiltrosCadastro();
+  }, 300));
+
+  $("cadastro-ordenar-por").addEventListener("change", (e) => {
+    cadastroOrdenarPor = e.target.value;
+    cadastroPagina = 1;
+    atualizarTabelaCadastro();
+  });
+  $("cadastro-ordem-toggle").addEventListener("click", (e) => {
+    cadastroOrdemAsc = !cadastroOrdemAsc;
+    e.target.dataset.asc = String(cadastroOrdemAsc);
+    e.target.textContent = cadastroOrdemAsc ? "↑ Ascendente" : "↓ Descendente";
+    cadastroPagina = 1;
+    atualizarTabelaCadastro();
+  });
+
+  // Historico e versoes
+  document.querySelectorAll(".historico-tab").forEach((tab) => {
+    tab.addEventListener("click", () => mostrarAbaHistorico(tab.dataset.historicoTab));
+  });
+  $("historico-versoes-lista").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-restaurar-versao]");
+    if (btn) mostrarDiffRestauracao(Number(btn.dataset.restaurarVersao));
+  });
+  $("historico-restaurar-cancelar").addEventListener("click", () => { $("historico-restaurar-diff").hidden = true; });
+  $("historico-restaurar-confirmar").addEventListener("click", onConfirmarRestauracao);
 
   document.querySelectorAll(".sandbox-kpi[data-kpi]").forEach((tile) => {
     const chave = tile.dataset.kpi;
-    const tipoFiltro = { pj_distinto: "pj_distinto", inconsistente: "inconsistente", prioritario: "prioritario", respondentes: "respondentes" }[chave];
-    if (!tipoFiltro) return;
+    const acao = {
+      pj_distinto: () => { cadastroFiltros.status = new Set(["Concluinte"]); cadastroPagina = 1; aplicarFiltrosCadastro(); },
+      inconsistente: () => { cadastroFiltros.inconsistente = true; cadastroPagina = 1; aplicarFiltrosCadastro(); },
+      prioritario: () => { cadastroFiltros.prioritario = true; cadastroPagina = 1; aplicarFiltrosCadastro(); },
+      respondentes: () => { cadastroFiltros.respondeu = true; cadastroPagina = 1; aplicarFiltrosCadastro(); },
+    }[chave];
+    if (!acao) return;
     tile.classList.add("is-clickable");
     tile.addEventListener("click", (e) => {
       if (e.target.closest(".kpi-info")) return;
-      definirDrillDownSandbox(tipoFiltro, true, tile.querySelector(".stat-label").childNodes[0].textContent.trim());
+      acao();
+      $("cadastro-filter-bar").scrollIntoView({ behavior: "smooth", block: "start" });
     });
   });
 
