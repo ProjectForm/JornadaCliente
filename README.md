@@ -61,18 +61,20 @@ gestor usa para mexer na carteira sem esperar a próxima carga completa:
 python adicionar_cliente.py   # menu interativo: login por ID de gestor, depois incluir/editar/excluir
 ```
 
-## 5. Demo publicada (site + sandbox ao vivo)
+## 5. Site publicado ("Planilha de Controle — Jornada do Cliente")
 
 **[jornada-clienteweb.vercel.app](https://jornada-clienteweb.vercel.app)** —
 link público, sem precisar rodar nada localmente (`web/`, hospedado no
-Vercel, deploy automático a cada push no repositório):
+Vercel, deploy automático a cada push no repositório). Ver
+`docs/PRODUTO.md` para o posicionamento de produto completo (nome,
+problema, proposta de valor, decisões de UX); aqui o resumo técnico:
 
 - **Painel de KPIs** e gráficos (PJ Distintos por vertical, status,
   ranking de gestores) — estáticos, gerados por `export_web_data.py` a partir
   de `data/reports/*.csv`.
 - **Base de clientes** navegável (busca, filtro por vertical/gestor/status,
   paginação) com os 2500 clientes sintéticos.
-- **Sandbox de inclusão ao vivo** — banco Postgres real (Supabase),
+- **Cadastro** — área de operação ao vivo, banco Postgres real (Supabase),
   separado do dataset acima, onde qualquer visitante testa incluir/editar/
   excluir cliente e vê a regra de permissão por vertical bloqueando edição
   entre gestores de verticais diferentes, na prática. Schema, RLS e as
@@ -106,7 +108,7 @@ localmente vai reproduzir exatamente os mesmos números impressos no terminal.
 Python (stdlib: `sqlite3`, `csv`) para o pipeline · SQL (views) para a lógica
 de negócio · Pandas/Matplotlib para análise exploratória · Power BI (DAX) para
 o dashboard final · pytest para validar a regra de classificação · HTML/CSS/JS
-+ Supabase (Postgres/RLS) para o site publicado e o sandbox ao vivo.
++ Supabase (Postgres/RLS) para o site publicado e o Cadastro ao vivo.
 
 ---
 ## English version
@@ -138,12 +140,15 @@ to `log_alteracoes` (who, when, field, old → new value) and immediately
 re-exports the CSVs in `data/reports/`, so Power BI only needs a refresh to
 reflect the change.
 
-**Live demo:** [jornada-clienteweb.vercel.app](https://jornada-clienteweb.vercel.app) —
-no local setup needed, auto-deployed on every push. KPIs/charts, a searchable/filterable browser over the
-2500 synthetic clients, and a live public sandbox (real Postgres via
-Supabase, RLS + PL/pgSQL functions mirroring `permissoes.py`) where anyone
-can try including/editing a client and see the vertical-permission rule
-block a cross-vertical edit in real time (`supabase/schema_demo.sql`).
+**Live site — "Planilha de Controle — Jornada do Cliente":**
+[jornada-clienteweb.vercel.app](https://jornada-clienteweb.vercel.app) —
+no local setup needed, auto-deployed on every push. See `docs/PRODUTO.md`
+(Portuguese) for the full product positioning. KPIs/charts, a
+searchable/filterable browser over the 2500 synthetic clients, and a live
+**Cadastro** (registration/operation area — real Postgres via Supabase,
+RLS + PL/pgSQL functions mirroring `permissoes.py`) where anyone can try
+including/editing a client and see the vertical-permission rule block a
+cross-vertical edit in real time (`supabase/schema_demo.sql`).
 
 Run:
 ```bash

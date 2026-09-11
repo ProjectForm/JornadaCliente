@@ -37,6 +37,7 @@ let focoAntesDoModal = null;
 let ultimaSincronizacao = null;
 let criterioRanking = "pj_distintos";
 let drillDownFiltro = null; // { tipo, valor, label }
+let buscaCadastro = "";
 let highlightFirstLog = false;
 
 const $ = (id) => document.getElementById(id);
@@ -216,7 +217,7 @@ function tratarErroOperacao(err) {
   const msg = String(err?.message || "");
 
   if (/failed to fetch|networkerror|load failed/i.test(msg) || !msg) {
-    toast("Nao foi possivel conectar ao sandbox.", "error");
+    toast("Nao foi possivel conectar ao Cadastro.", "error");
     return;
   }
   if (msg.includes("nao tem permissao")) {
@@ -242,8 +243,8 @@ function setConnStatus(state) {
   el.dataset.state = state;
   el.querySelector(".conn-text").textContent = {
     connecting: "Conectando...",
-    online: "Sandbox online",
-    offline: "Sandbox indisponivel",
+    online: "Cadastro online",
+    offline: "Cadastro indisponivel",
   }[state] || state;
   $("conn-banner").hidden = state !== "offline";
   atualizarValidacaoInclusao();
@@ -269,7 +270,7 @@ function mostrarSkeletonListas() {
   $("sandbox-ranking").innerHTML = "";
   document.querySelectorAll(".sandbox-kpi").forEach((el) => el.classList.add("skeleton"));
   document.querySelector("#table-demo-clientes tbody").innerHTML =
-    `<tr><td colspan="6" style="color:var(--ink-3)">Carregando clientes do sandbox...</td></tr>`;
+    `<tr><td colspan="6" style="color:var(--ink-3)">Carregando clientes do Cadastro...</td></tr>`;
   $("demo-clientes-empty").hidden = true;
   $("table-demo-log").innerHTML =
     `<div class="timeline-item"><span class="timeline-when">&nbsp;</span><span class="timeline-dot-col"><span class="timeline-dot"></span></span><span class="timeline-body" style="color:var(--ink-3)">Carregando atividade...</span></div>`;
@@ -278,10 +279,10 @@ function mostrarSkeletonListas() {
 
 function mostrarIndisponivel() {
   document.querySelector("#table-demo-clientes tbody").innerHTML =
-    `<tr><td colspan="6" style="color:var(--ink-3)">Sem conexao com o sandbox no momento.</td></tr>`;
+    `<tr><td colspan="6" style="color:var(--ink-3)">Sem conexao com o Cadastro no momento.</td></tr>`;
   $("table-demo-log").innerHTML =
-    `<div class="timeline-item"><span class="timeline-when">&nbsp;</span><span class="timeline-dot-col"><span class="timeline-dot"></span></span><span class="timeline-body" style="color:var(--ink-3)">Sem conexao com o sandbox no momento.</span></div>`;
-  $("sandbox-ranking").innerHTML = `<p class="empty-state">Sem conexao com o sandbox no momento.</p>`;
+    `<div class="timeline-item"><span class="timeline-when">&nbsp;</span><span class="timeline-dot-col"><span class="timeline-dot"></span></span><span class="timeline-body" style="color:var(--ink-3)">Sem conexao com o Cadastro no momento.</span></div>`;
+  $("sandbox-ranking").innerHTML = `<p class="empty-state">Sem conexao com o Cadastro no momento.</p>`;
 }
 
 async function tentarConectar() {
@@ -347,17 +348,26 @@ function agregarPorGestorSandbox(clientes) {
    quem compoe aquele numero.
    ============================================================================ */
 function aplicarFiltrosSandbox(clientes) {
-  if (!drillDownFiltro) return clientes;
-  const { tipo, valor } = drillDownFiltro;
-  return clientes.filter((c) => {
-    if (tipo === "gestor") return c.gestor_id === valor;
-    if (tipo === "vertical") return c.vertical === valor;
-    if (tipo === "pj_distinto") return c.pj_distinto === true;
-    if (tipo === "inconsistente") return c.inconsistente_geral === true;
-    if (tipo === "prioritario") return c.prioritario === true;
-    if (tipo === "respondentes") return c.respondeu === true;
-    return true;
-  });
+  let resultado = clientes;
+  if (drillDownFiltro) {
+    const { tipo, valor } = drillDownFiltro;
+    resultado = resultado.filter((c) => {
+      if (tipo === "gestor") return c.gestor_id === valor;
+      if (tipo === "vertical") return c.vertical === valor;
+      if (tipo === "pj_distinto") return c.pj_distinto === true;
+      if (tipo === "inconsistente") return c.inconsistente_geral === true;
+      if (tipo === "prioritario") return c.prioritario === true;
+      if (tipo === "respondentes") return c.respondeu === true;
+      return true;
+    });
+  }
+  if (buscaCadastro) {
+    const q = buscaCadastro.toLowerCase();
+    const qDigitos = somenteDigitos(buscaCadastro);
+    resultado = resultado.filter((c) =>
+      c.razao_social.toLowerCase().includes(q) || (qDigitos && somenteDigitos(c.cnpj).includes(qDigitos)));
+  }
+  return resultado;
 }
 
 function definirDrillDownSandbox(tipo, valor, label) {
@@ -397,14 +407,14 @@ function montarRankingSandbox(clientesFiltrados) {
   const porGestor = agregarPorGestorSandbox(clientesFiltrados);
   const container = $("sandbox-ranking");
   if (!porGestor.length) {
-    container.innerHTML = `<p class="empty-state">Nenhum gestor com clientes no sandbox ainda.</p>`;
+    container.innerHTML = `<p class="empty-state">Nenhum gestor com clientes no Cadastro ainda.</p>`;
     return;
   }
   const crit = CRITERIOS_RANKING[criterioRanking];
   const ordenado = [...porGestor].sort((a, b) => crit.calc(b) - crit.calc(a)).slice(0, 5);
 
   container.innerHTML = ordenado.map((g, i) => `
-    <div class="ranking-row" data-gestor-id="${g.gestor_id}" tabindex="0" role="button" title="Ver so a carteira de ${g.gestor} no sandbox">
+    <div class="ranking-row" data-gestor-id="${g.gestor_id}" tabindex="0" role="button" title="Ver so a carteira de ${g.gestor} no Cadastro">
       <span class="ranking-pos">${i + 1}&ordm;</span>
       <span class="ranking-nome">${g.gestor}<span class="ranking-vertical">${g.vertical}</span></span>
       <span class="ranking-valor">${crit.fmt(crit.calc(g))}</span>
@@ -602,7 +612,7 @@ function abrirModalBloqueado(mensagem) {
 
 function abrirModalInfo(chave) {
   const textos = {
-    total: "Total de clientes ativos no sandbox (excluidos nao contam).",
+    total: "Total de clientes ativos no Cadastro (excluidos nao contam).",
     pj_distinto: "Clientes concluintes -- >=1 diagnostico valido + 2 assessorias validas, OU >=1 atendimento Sebraetec valido -- em pelo menos um Centro de Custo. Mesma regra de sql/queries.sql, calculada em v_demo_classificacao_cc.",
     inconsistente: "Clientes que seriam concluintes se os atendimentos lancados fossem validos, mas nao sao (dado invalido na fonte). Tratado separado da conclusao -- nunca reduz o PJ Distinto de outro cliente.",
     prioritario: "Clientes marcados manualmente como prioritarios pelo gestor responsavel, via edicao do cadastro.",
@@ -737,7 +747,7 @@ function coletarExtraInclusao() {
 
 async function onSubmitIncluir(e) {
   e.preventDefault();
-  if (connState !== "online") { toast("Sandbox indisponivel no momento.", "error"); return; }
+  if (connState !== "online") { toast("Cadastro indisponivel no momento.", "error"); return; }
   if (!atualizarValidacaoInclusao()) return;
 
   const btn = $("demo-submit");
@@ -752,7 +762,7 @@ async function onSubmitIncluir(e) {
   try {
     const novoId = await incluirClienteDemo({ gestorId, razaoSocial, cnpj, porte, extra });
     setButtonState(btn, "success", { successLabel: "Cliente incluido" });
-    toast("Cliente incluido no sandbox.", "success");
+    toast("Cliente incluido no Cadastro.", "success");
     $("demo-razao-social").value = "";
     $("demo-cnpj").value = "";
     $("demo-porte").value = "MEI";
@@ -775,7 +785,7 @@ async function onSubmitIncluir(e) {
 async function onSubmitEditar(e) {
   e.preventDefault();
   if (!clienteEmEdicao) return;
-  if (connState !== "online") { toast("Sandbox indisponivel no momento.", "error"); return; }
+  if (connState !== "online") { toast("Cadastro indisponivel no momento.", "error"); return; }
 
   const novaRazao = $("editar-razao-social").value.trim();
   if (!novaRazao) { setFieldError("editar-razao-social", "erro-editar-razao-social", "Informe a razao social."); return; }
@@ -824,7 +834,7 @@ async function onSubmitEditar(e) {
 
 async function onClickExcluir() {
   if (!clienteParaExcluir) return;
-  if (connState !== "online") { toast("Sandbox indisponivel no momento.", "error"); return; }
+  if (connState !== "online") { toast("Cadastro indisponivel no momento.", "error"); return; }
 
   const btn = $("excluir-confirmar");
   setButtonState(btn, "loading", { loadingLabel: "Excluindo..." });
@@ -833,7 +843,7 @@ async function onClickExcluir() {
   try {
     await excluirClienteDemo({ clienteId: clienteParaExcluir.id, operadorId });
     setButtonState(btn, "success", { successLabel: "Excluido" });
-    toast("Cliente removido do sandbox.", "success");
+    toast("Cliente removido do Cadastro.", "success");
     setTimeout(async () => {
       fecharModal();
       await recarregarSandboxEAtualizarTudo({ highlightLog: true });
@@ -858,15 +868,15 @@ function baixarModeloXLSX() {
 
   const listaGestores = gestoresPorId.size
     ? [...gestoresPorId.values()].map((g) => [`  ${g.nome} (${g.vertical})`])
-    : [["  (conecte-se ao sandbox para ver a lista atualizada de gestores)"]];
+    : [["  (conecte-se ao Cadastro para ver a lista atualizada de gestores)"]];
 
   const instrucoes = [
-    ["Modelo de importacao -- Sandbox Jornada Cliente"],
+    ["Modelo de importacao -- Cadastro Jornada do Cliente"],
     [],
     ["Preencha a aba 'Clientes' abaixo e depois use o botao 'Importar XLSX' no site."],
     [],
     ["Campos obrigatorios:"],
-    ["  Gestor -- nome exato de um dos gestores do sandbox (lista abaixo)"],
+    ["  Gestor -- nome exato de um dos gestores do Cadastro (lista abaixo)"],
     ["  Razao Social"],
     ["  CNPJ -- 14 digitos (com ou sem pontuacao)"],
     ["  Porte -- MEI, ME, EPP, MEDIA ou GRANDE"],
@@ -1023,7 +1033,7 @@ async function onArquivoImportacaoSelecionado(e) {
 async function onConfirmarImportacao() {
   const validos = importacaoValidada.filter((r) => r.valido);
   if (!validos.length) return;
-  if (connState !== "online") { toast("Sandbox indisponivel no momento.", "error"); return; }
+  if (connState !== "online") { toast("Cadastro indisponivel no momento.", "error"); return; }
 
   const btn = $("importar-confirmar");
   setButtonState(btn, "loading", { loadingLabel: `Importando 0/${validos.length}...` });
@@ -1104,6 +1114,11 @@ function wireEstatico() {
   });
 
   $("sandbox-drilldown-clear").addEventListener("click", limparDrillDownSandbox);
+
+  $("cadastro-busca").addEventListener("input", () => {
+    buscaCadastro = $("cadastro-busca").value.trim();
+    renderizarSandboxCompleto();
+  });
 
   document.querySelectorAll(".sandbox-kpi[data-kpi]").forEach((tile) => {
     const chave = tile.dataset.kpi;

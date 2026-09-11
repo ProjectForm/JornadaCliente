@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Painel de Acompanhamento de Carteira</title>
-<meta name="description" content="Demo publica de um painel de acompanhamento de carteira de clientes -- SQL + Python + Power BI, dados 100% sinteticos.">
+<title>Planilha de Controle &mdash; Jornada do Cliente</title>
+<meta name="description" content="Planilha de Controle -- Jornada do Cliente: cadastro e acompanhamento centralizado da carteira de clientes, com indicadores e validacao de inconsistencias em uma unica operacao. Dados 100% sinteticos.">
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -12,15 +12,14 @@
 <header class="site-header" id="site-header">
   <div class="wrap header-row">
     <div class="brand">
-      <span class="brand-mark">Jornada Cliente</span>
-      <span class="brand-tag">&middot; portfolio tecnico</span>
+      <span class="brand-mark">Planilha de Controle &mdash; Jornada do Cliente</span>
+      <span class="brand-tag">&middot; SEBRAE &middot; ER Rio Preto</span>
     </div>
     <nav class="header-links">
       <a href="#dashboard">Dashboard</a>
       <a href="#dataset">Base</a>
-      <a href="#demo-inclusao">Sandbox</a>
       <a href="https://github.com/ProjectForm/JornadaCliente" target="_blank" rel="noopener">GitHub</a>
-      <a href="#powerbi" class="btn-cta">Power BI</a>
+      <a href="#cadastro" class="btn-cta">Abrir Cadastro</a>
     </nav>
   </div>
 </header>
@@ -31,17 +30,87 @@
 
 <main>
 
-  <!-- 01 — HERO -->
+  <!-- 01 — HERO: título + subtítulo → problema/valor → impacto → ação principal → funcionalidades -->
   <section class="hero-section wrap">
-    <p class="eyebrow" data-reveal>Portfolio &middot; Technical Case</p>
-    <h1 class="hero-title" data-reveal data-reveal-delay="1">Da complexidade dos dados<br>&agrave; decis&atilde;o em segundos.</h1>
+    <p class="eyebrow" data-reveal>SEBRAE &middot; ER Rio Preto</p>
+    <h1 class="hero-title" data-reveal data-reveal-delay="1">Do cadastro &agrave; decis&atilde;o,<br>sem cruzar planilhas.</h1>
     <p class="hero-sub" data-reveal data-reveal-delay="2">
-      Reconstru&ccedil;&atilde;o p&uacute;blica de uma solu&ccedil;&atilde;o de acompanhamento de carteira
-      desenvolvida originalmente em Excel/VBA &mdash; reimplementada com SQL, Python, Supabase e Power BI.
+      Acompanhe clientes, jornada, faturamento, metas e inconsist&ecirc;ncias em uma &uacute;nica opera&ccedil;&atilde;o
+      &mdash; do primeiro registro &agrave; decis&atilde;o do gestor.
     </p>
-    <div class="hero-actions" data-reveal data-reveal-delay="3">
-      <a href="#dashboard" class="btn btn-primary">Ver o dashboard</a>
-      <a href="https://github.com/ProjectForm/JornadaCliente" target="_blank" rel="noopener" class="btn btn-ghost">Codigo no GitHub</a>
+
+    <p class="hero-problem" data-reveal data-reveal-delay="3">
+      Com m&uacute;ltiplas verticais, cada uma com seu pr&oacute;prio controle, a mesma pergunta &mdash;
+      <em>quais clientes j&aacute; entraram? quantos t&ecirc;m pend&ecirc;ncia?</em> &mdash; pode ter respostas
+      diferentes dependendo de quem responde. <strong style="color:var(--ink-0)">Isso troca v&aacute;rias
+      respostas por uma s&oacute;</strong>: uma fonte operacional &uacute;nica para acompanhar a carteira.
+    </p>
+
+    <div class="value-grid" data-reveal data-reveal-delay="3">
+      <div class="value-item">
+        <h4>Centraliza&ccedil;&atilde;o</h4>
+        <p>Uma &uacute;nica base, em vez de um controle por vertical.</p>
+      </div>
+      <div class="value-item">
+        <h4>Visibilidade</h4>
+        <p>Todos os gestores acompanham a mesma informa&ccedil;&atilde;o.</p>
+      </div>
+      <div class="value-item">
+        <h4>Valida&ccedil;&atilde;o</h4>
+        <p>Erros e inconsist&ecirc;ncias de lan&ccedil;amento ficam evidentes.</p>
+      </div>
+      <div class="value-item">
+        <h4>Decis&atilde;o</h4>
+        <p>O gestor age sem precisar cruzar v&aacute;rias planilhas.</p>
+      </div>
+    </div>
+
+    <div class="hero-metrics" data-reveal data-reveal-delay="4">
+      <div class="hero-metric">
+        <span class="value">&asymp;304h</span>
+        <span class="label">de esfor&ccedil;o recorrente potencialmente evitado por ano</span>
+      </div>
+      <div class="hero-metric">
+        <span class="value">9</span>
+        <span class="label">verticais centralizadas em uma &uacute;nica opera&ccedil;&atilde;o</span>
+      </div>
+      <div class="hero-metric">
+        <span class="value">&darr;</span>
+        <span class="label">redu&ccedil;&atilde;o do risco de duplicidade entre verticais</span>
+      </div>
+    </div>
+    <p class="hero-impact-caption" data-reveal data-reveal-delay="4">
+      Estimativa de esfor&ccedil;o potencialmente evitado, baseada nas premissas do processo atual
+      &mdash; n&atilde;o &eacute; uma medi&ccedil;&atilde;o hist&oacute;rica auditada.
+    </p>
+    <details class="impact-detalhamento" data-reveal data-reveal-delay="4">
+      <summary>Ver premissas do c&aacute;lculo</summary>
+      <ul>
+        <li>9 verticais, cada uma com ~3 extra&ccedil;&otilde;es/semana &times; 3 minutos + ~30 minutos de
+          confer&ecirc;ncia manual = <strong>39 min/vertical/semana</strong>.</li>
+        <li>39 min &times; 9 verticais &times; 52 semanas &asymp; <strong>304 horas/ano</strong> de esfor&ccedil;o
+          recorrente potencialmente evitado.</li>
+        <li>Mais ~2 dias (16h) por vertical de desenvolvimento de dashboards independentes &times; 9 verticais
+          &asymp; <strong>144 horas</strong> de esfor&ccedil;o pontual potencialmente evitado no primeiro ano.</li>
+        <li>Total estimado no primeiro ano: <strong>&asymp;448 horas</strong>.</li>
+      </ul>
+      <p>Estas s&atilde;o premissas do case (n&atilde;o uma medi&ccedil;&atilde;o hist&oacute;rica auditada) —
+        servem para ilustrar a ordem de grandeza do problema que a centraliza&ccedil;&atilde;o ataca.</p>
+    </details>
+
+    <div class="hero-actions" data-reveal data-reveal-delay="4">
+      <a href="#cadastro" class="btn btn-primary btn-lg">Abrir Cadastro</a>
+    </div>
+    <p class="hero-secondary-link" data-reveal data-reveal-delay="4">
+      <a href="https://github.com/ProjectForm/JornadaCliente" target="_blank" rel="noopener">Ver c&oacute;digo-fonte no GitHub</a>
+    </p>
+
+    <div class="feature-row" data-reveal data-reveal-delay="4">
+      <span class="feature-pill">Cadastro de clientes</span>
+      <span class="feature-pill">Dashboard consolidado por vertical</span>
+      <span class="feature-pill">Valida&ccedil;&atilde;o de inconsist&ecirc;ncias</span>
+      <span class="feature-pill">Exporta&ccedil;&atilde;o e importa&ccedil;&atilde;o XLSX</span>
+      <span class="feature-pill">Auditoria de altera&ccedil;&otilde;es</span>
     </div>
   </section>
 
@@ -49,7 +118,7 @@
   <section class="wrap section-pad" id="impacto">
     <div class="section-head" data-reveal>
       <p class="eyebrow"><span class="index">02</span> Impacto</p>
-      <h2 class="section-title">Uma carteira inteira, entendida de uma vez.</h2>
+      <h2 class="section-title">O que os n&uacute;meros da carteira mostram.</h2>
       <p class="section-sub">Os mesmos n&uacute;meros que hoje exigiriam cruzar planilhas manualmente.</p>
     </div>
 
@@ -126,7 +195,7 @@
         </p>
         <h3>Base de clientes</h3>
         <p class="dataset-count" id="dataset-count">2.500 clientes</p>
-        <p class="card-sub">Os 2500 clientes sint&eacute;ticos do dataset &mdash; usa os filtros acima, mais busca e pagina&ccedil;&atilde;o aqui (somente leitura, clique numa linha para ver o detalhe)</p>
+        <p class="card-sub">Os 2500 clientes sint&eacute;ticos gerados pelo pipeline SQL + Python &mdash; base somente leitura, usa os filtros acima, mais busca e pagina&ccedil;&atilde;o aqui (clique numa linha para ver o detalhe). Para incluir, editar ou excluir um cliente, use o <a href="#cadastro" style="color:var(--ink-0)">Cadastro</a>.</p>
       </div>
       <div class="filters-row">
         <input type="search" id="clientes-busca" placeholder="Buscar por razao social ou CNPJ..." class="input-search">
@@ -153,15 +222,49 @@
   <section class="wrap section-pad-sm" id="problema">
     <div class="section-head" data-reveal>
       <p class="eyebrow"><span class="index">04</span> O problema</p>
-      <h2 class="section-title">Uma regra de neg&oacute;cio, mil planilhas de dist&acirc;ncia.</h2>
+      <h2 class="section-title">Nove verticais. Uma pergunta. Respostas diferentes.</h2>
     </div>
     <p class="section-sub" data-reveal style="max-width:70ch;font-size:var(--fs-body)">
-      Uma organiza&ccedil;&atilde;o com <strong style="color:var(--ink-0)">m&uacute;ltiplos gestores de carteira</strong> precisa saber,
-      a cada atualiza&ccedil;&atilde;o da base de atendimentos, quais clientes j&aacute; cumpriram a regra de neg&oacute;cio de
-      "conclus&atilde;o" &mdash; e quais teriam cumprido, se n&atilde;o fosse um lan&ccedil;amento inv&aacute;lido por erro de
-      digita&ccedil;&atilde;o ou integra&ccedil;&atilde;o. Esta &eacute; a mesma l&oacute;gica resolvida com <strong style="color:var(--ink-0)">SQL + Python</strong>
-      em vez de f&oacute;rmulas de planilha, com um <strong style="color:var(--ink-0)">CLI para os gestores</strong> incluirem/editarem
-      clientes com permiss&atilde;o por vertical, e um <strong style="color:var(--ink-0)">relat&oacute;rio Power BI</strong> para a visualiza&ccedil;&atilde;o final.
+      Com <strong style="color:var(--ink-0)">m&uacute;ltiplos gestores</strong>, cada um em sua vertical e com seu
+      pr&oacute;prio controle, extra&ccedil;&otilde;es recorrentes e confer&ecirc;ncias manuais acabam sendo feitas
+      em paralelo &mdash; com risco real de <strong style="color:var(--ink-0)">clientes duplicados entre
+      verticais</strong> e dificuldade para saber, no fim, qual n&uacute;mero &eacute; o correto. O custo n&atilde;o
+      &eacute; s&oacute; "ter muita planilha": &eacute; trabalho repetido, confer&ecirc;ncia redundante e perda de
+      rastreabilidade.
+    </p>
+
+    <div class="story-flow" data-reveal data-reveal-delay="1">
+      <div class="story-col">
+        <span class="story-label">Antes</span>
+        <div class="arch-flow">
+          <span class="arch-step">M&uacute;ltiplas bases</span><span class="arch-sep">&rarr;</span>
+          <span class="arch-step">Extra&ccedil;&otilde;es</span><span class="arch-sep">&rarr;</span>
+          <span class="arch-step">Confer&ecirc;ncias</span><span class="arch-sep">&rarr;</span>
+          <span class="arch-step">Controles paralelos</span><span class="arch-sep">&rarr;</span>
+          <span class="arch-step is-risk">Risco de duplicidade</span>
+        </div>
+      </div>
+      <div class="story-col">
+        <span class="story-label">Depois</span>
+        <div class="arch-flow">
+          <span class="arch-step">Cadastro &uacute;nico</span><span class="arch-sep">&rarr;</span>
+          <span class="arch-step">Base centralizada</span><span class="arch-sep">&rarr;</span>
+          <span class="arch-step">Acompanhamento</span><span class="arch-sep">&rarr;</span>
+          <span class="arch-step">An&aacute;lise</span><span class="arch-sep">&rarr;</span>
+          <span class="arch-step is-good">Decis&atilde;o</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="section-sub" data-reveal data-reveal-delay="2" style="max-width:70ch;font-size:var(--fs-caption);color:var(--ink-2);margin-top:24px;padding-top:20px;border-top:1px solid var(--hairline)">
+      <strong style="color:var(--ink-1)">Nos bastidores:</strong> a cada atualiza&ccedil;&atilde;o da base de
+      atendimentos, o sistema decide quais clientes j&aacute; cumpriram a regra de neg&oacute;cio de
+      "conclus&atilde;o" &mdash; e quais teriam cumprido, se n&atilde;o fosse um lan&ccedil;amento inv&aacute;lido por
+      erro de digita&ccedil;&atilde;o ou integra&ccedil;&atilde;o. A mesma l&oacute;gica &eacute; resolvida com
+      <strong style="color:var(--ink-1)">SQL + Python</strong> em vez de f&oacute;rmulas de planilha, com o
+      <strong style="color:var(--ink-1)">Cadastro</strong> substituindo o CLI original para inclus&atilde;o/edi&ccedil;&atilde;o
+      com permiss&atilde;o por vertical, e um <strong style="color:var(--ink-1)">relat&oacute;rio Power BI</strong>
+      para a visualiza&ccedil;&atilde;o final.
     </p>
   </section>
 
@@ -221,20 +324,21 @@
     </div>
   </section>
 
-  <!-- 07 — SANDBOX -->
-  <section class="wrap section-pad" id="demo-inclusao">
+  <!-- 07 — CADASTRO (área principal de operação) -->
+  <section class="wrap section-pad" id="cadastro">
     <div class="card demo-card" data-reveal>
       <div class="card-head">
-        <p class="eyebrow"><span class="index">07</span> Sandbox</p>
+        <p class="eyebrow"><span class="index">07</span> Cadastro</p>
         <div class="demo-title-row">
-          <h3>Interactive Sandbox &mdash; mini-BI ao vivo</h3>
+          <h3>Cadastro de clientes</h3>
           <span class="conn-status" id="conn-status" data-state="connecting">
             <span class="conn-dot"></span>
             <span class="conn-text">Conectando...</span>
           </span>
         </div>
         <p class="card-sub">
-          Banco Postgres real (Supabase), separado do dataset de 2.500 clientes acima. As regras de
+          A partir daqui voc&ecirc; consulta a carteira, inclui e atualiza clientes, e acompanha a jornada em
+          tempo real. Banco Postgres real (Supabase), separado do dataset de 2.500 clientes acima. As regras de
           permiss&atilde;o por vertical (mesma l&oacute;gica de <code>permissoes.py</code>) e a regra de
           conclus&atilde;o (mesma de <code>sql/queries.sql</code>) s&atilde;o calculadas no banco, nunca no navegador.
           Qualquer inclus&atilde;o/edi&ccedil;&atilde;o/exclus&atilde;o atualiza tudo abaixo automaticamente.
@@ -253,12 +357,12 @@
       </div>
 
       <div class="conn-banner" id="conn-banner" hidden>
-        <span>N&atilde;o foi poss&iacute;vel conectar ao sandbox agora.</span>
+        <span>N&atilde;o foi poss&iacute;vel conectar ao Cadastro agora.</span>
         <button type="button" class="btn btn-ghost btn-sm" id="conn-retry">Tentar novamente</button>
       </div>
 
       <div class="sandbox-kpi-row" id="sandbox-kpi-row">
-        <div class="stat-tile sandbox-kpi skeleton" data-kpi="total"><span class="stat-label">Total de clientes<button type="button" class="kpi-info" data-info="total" aria-label="Como este indicador e calculado" title="Total de clientes ativos no sandbox (excluidos nao contam).">i</button></span><span class="stat-value">&nbsp;</span></div>
+        <div class="stat-tile sandbox-kpi skeleton" data-kpi="total"><span class="stat-label">Total de clientes<button type="button" class="kpi-info" data-info="total" aria-label="Como este indicador e calculado" title="Total de clientes ativos no Cadastro (excluidos nao contam).">i</button></span><span class="stat-value">&nbsp;</span></div>
         <div class="stat-tile sandbox-kpi skeleton" data-kpi="pj_distinto"><span class="stat-label">PJ Distinto<button type="button" class="kpi-info" data-info="pj_distinto" aria-label="Como este indicador e calculado" title="Clientes concluintes (>=1 diagnostico + 2 assessorias validas, ou >=1 atendimento Sebraetec valido) em pelo menos um Centro de Custo.">i</button></span><span class="stat-value">&nbsp;</span></div>
         <div class="stat-tile sandbox-kpi skeleton" data-kpi="inconsistente"><span class="stat-label">Inconsistentes<button type="button" class="kpi-info" data-info="inconsistente" aria-label="Como este indicador e calculado" title="Clientes que seriam concluintes se os atendimentos lancados fossem validos, mas nao sao -- indica erro/pendencia na fonte, tratado separado da conclusao.">i</button></span><span class="stat-value">&nbsp;</span></div>
         <div class="stat-tile sandbox-kpi skeleton" data-kpi="prioritario"><span class="stat-label">Priorit&aacute;rios<button type="button" class="kpi-info" data-info="prioritario" aria-label="Como este indicador e calculado" title="Clientes marcados manualmente como prioritarios pelo gestor responsavel.">i</button></span><span class="stat-value">&nbsp;</span></div>
@@ -277,7 +381,7 @@
             <p class="operator-label">Operador simulado</p>
             <p class="operator-name" id="operator-name">&mdash;</p>
             <p class="operator-vertical" id="operator-vertical">&nbsp;</p>
-            <p class="operator-hint">Simula&ccedil;&atilde;o de operador para demonstra&ccedil;&atilde;o das regras de permiss&atilde;o &mdash; n&atilde;o &eacute; um login real.</p>
+            <p class="operator-hint">Simula&ccedil;&atilde;o do operador logado, usada para aplicar as regras de permiss&atilde;o por vertical &mdash; este ambiente ainda n&atilde;o tem autentica&ccedil;&atilde;o real.</p>
           </div>
 
           <form id="demo-form" class="demo-form" novalidate>
@@ -325,19 +429,23 @@
 
         <div class="demo-list">
           <div class="demo-list-head">
-            <h4>Clientes do sandbox</h4>
-            <div class="ranking-criterio">
-              <label for="sandbox-ranking-criterio">Ranking por</label>
-              <select id="sandbox-ranking-criterio" class="input-select">
-                <option value="clientes">Mais clientes</option>
-                <option value="pj_distintos">Mais PJ Distintos</option>
-                <option value="pct_conclusao">Maior % de conclus&atilde;o</option>
-                <option value="respondentes">Mais respondentes</option>
-                <option value="aumento_medio">Maior aumento m&eacute;dio</option>
-                <option value="inconsistencias">Mais inconsist&ecirc;ncias</option>
-              </select>
+            <h4>Base de clientes do Cadastro</h4>
+            <div class="cadastro-list-controls">
+              <input type="search" id="cadastro-busca" class="input-search input-search-sm" placeholder="Buscar por razao social ou CNPJ..." aria-label="Buscar clientes do Cadastro">
+              <div class="ranking-criterio">
+                <label for="sandbox-ranking-criterio">Ranking por</label>
+                <select id="sandbox-ranking-criterio" class="input-select">
+                  <option value="clientes">Mais clientes</option>
+                  <option value="pj_distintos">Mais PJ Distintos</option>
+                  <option value="pct_conclusao">Maior % de conclus&atilde;o</option>
+                  <option value="respondentes">Mais respondentes</option>
+                  <option value="aumento_medio">Maior aumento m&eacute;dio</option>
+                  <option value="inconsistencias">Mais inconsist&ecirc;ncias</option>
+                </select>
+              </div>
             </div>
           </div>
+          <p class="roadmap-note">Em breve nesta &aacute;rea: filtros por vertical/status/gestor, prioriza&ccedil;&atilde;o autom&aacute;tica e hist&oacute;rico de altera&ccedil;&otilde;es por cliente.</p>
           <div class="sandbox-ranking" id="sandbox-ranking"></div>
           <div class="table-wrap">
             <table class="data-table" id="table-demo-clientes">
@@ -348,15 +456,15 @@
             </table>
           </div>
           <p class="empty-state" id="demo-clientes-empty" hidden>
-            Nenhum cliente no sandbox.<br>Use o formul&aacute;rio ao lado para criar o primeiro registro.
+            Nenhum cliente no Cadastro.<br>Use o formul&aacute;rio ao lado para criar o primeiro registro.
           </p>
         </div>
       </div>
 
       <div class="table-wrap">
-        <h4>Atividade recente do sandbox</h4>
+        <h4>Atividade recente do Cadastro</h4>
         <div class="timeline" id="table-demo-log"></div>
-        <p class="empty-state" id="demo-log-empty" hidden>Nenhuma altera&ccedil;&atilde;o no sandbox ainda.</p>
+        <p class="empty-state" id="demo-log-empty" hidden>Nenhuma altera&ccedil;&atilde;o no Cadastro ainda.</p>
       </div>
     </div>
   </section>
@@ -445,7 +553,7 @@
     <div class="modal-dialog" id="modal-excluir" role="dialog" aria-modal="true" aria-labelledby="modal-excluir-title" hidden>
       <h4 id="modal-excluir-title">Excluir cliente?</h4>
       <p class="modal-target-name" id="excluir-nome-cliente"></p>
-      <p class="modal-text">Essa a&ccedil;&atilde;o remove o cliente da visualiza&ccedil;&atilde;o do sandbox &mdash; o registro continua no banco, marcado como inativo.</p>
+      <p class="modal-text">Essa a&ccedil;&atilde;o remove o cliente da visualiza&ccedil;&atilde;o do Cadastro &mdash; o registro continua no banco, marcado como inativo.</p>
       <div class="modal-actions">
         <button type="button" class="btn btn-ghost" data-modal-close>Cancelar</button>
         <button type="button" class="btn btn-danger" id="excluir-confirmar">
